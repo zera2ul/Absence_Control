@@ -5,8 +5,8 @@
 from os import getenv
 from dotenv import load_dotenv
 from asyncio import run
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram import Bot, Dispatcher
-
 
 
 # Подключение пользовательских модулей
@@ -22,8 +22,7 @@ async def main() -> None:
     load_dotenv()
     await create_models()
 
-
-    bot = Bot(token=getenv("BOT_TOKEN"))
+    bot = Bot(token=getenv("BOT_TOKEN"), session=AiohttpSession(proxy=getenv("PROXY_URL")))
 
     dp = Dispatcher()
     dp.include_routers(service_router, config_router, work_router, incorrect_router)
