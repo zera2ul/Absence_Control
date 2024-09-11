@@ -1,7 +1,7 @@
 # Подключение модулей Python
 from os import getenv
 from dotenv import load_dotenv
-from requests import post
+from aiohttp import ClientSession
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import (
@@ -162,15 +162,14 @@ async def get_group_members(callback: CallbackQuery, state: FSMContext) -> None:
 
 # Процедура для отправки сообщения пользователю
 async def send_message(chat_id: int, text: str) -> bool:
-    url = f'https://api.telegram.org/bot{getenv("BOT_TOKEN")}/sendMessage'
-    json_info = {"chat_id": chat_id, "text": text}
+    async with ClientSession() as session:
+        url = f'https://api.telegram.org/bot{getenv("BOT_TOKEN")}/sendMessage'
+        data = {"chat_id": chat_id, "text": text}
 
-    response = post(url, json=json_info)
-
-    if response.status_code == 200:
-        return True
-
-    return False
+        async with session.post(url, json=data) as response:
+            if response.status == 200:
+                return True
+            return False
 
 
 # Обработка команды "/getstatistics"
