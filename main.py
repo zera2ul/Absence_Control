@@ -5,6 +5,7 @@
 from os import getenv
 from dotenv import load_dotenv
 from asyncio import run
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram import Bot, Dispatcher
 
 
@@ -21,11 +22,13 @@ async def main() -> None:
     load_dotenv()
     await create_models()
 
-    bot = Bot(token=getenv("BOT_TOKEN"))
-    dp = Dispatcher()
-    dp.include_routers(service_router, config_router, work_router, incorrect_router)
+    async with AiohttpSession(proxy=getenv("PROXY_URL")) as session:
+        bot = Bot(token=getenv("BOT_TOKEN"), session=session)
 
-    await dp.start_polling(bot)
+        dp = Dispatcher()
+        dp.include_routers(service_router, config_router, work_router, incorrect_router)
+
+        await dp.start_polling(bot)
 
 
 # Запуск основной функции
