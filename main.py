@@ -9,6 +9,7 @@ from aiogram import Bot, Dispatcher
 
 
 # Подключение пользовательских модулей
+from bot import bot
 from handlers.service_handlers import service_router
 from handlers.config_handlers import config_router
 from handlers.work_handlers import work_router
@@ -20,8 +21,6 @@ from database.models import create_models
 async def main() -> None:
     load_dotenv()
     await create_models()
-
-    bot = Bot(token=getenv("BOT_TOKEN"))
 
     dp = Dispatcher()
     dp.include_routers(service_router, config_router, work_router, incorrect_router)

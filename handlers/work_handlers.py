@@ -1,7 +1,4 @@
 # Подключение модулей Python
-from os import getenv
-from dotenv import load_dotenv
-from aiohttp import ClientSession
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import (
@@ -15,6 +12,7 @@ from aiogram.fsm.context import FSMContext
 
 
 # Подключение пользовательских модулей
+from bot import bot
 from handlers.middleware import Middleware
 from handlers.states import Create_Report, Create_Statistics, Create_Reports_File
 from handlers.markups import create_reply_markup, create_report_markup
@@ -115,34 +113,19 @@ async def get_group_members(callback: CallbackQuery, state: FSMContext) -> None:
 
             mssg_txt = f'Изменения в сегодняшнем отчёте для группы "{group_name}."'
 
-            if not await send_message(group_reports_recipient, mssg_txt):
-                mssg_txt = "Невозможно отправить сообщение получателю."
-
-                await callback.answer(mssg_txt)
-
-                return
+            await bot.send_message(group_reports_recipient, mssg_txt)
 
         if len(group_members) == 0:
             mssg_txt = f'Сегодня в группе "{group_name}" отсутствующих нет.'
 
-            if not await send_message(group_reports_recipient, mssg_txt):
-                mssg_txt = "Невозможно отправить отчёт получателю."
-
-                await callback.answer(mssg_txt)
-
-                return
+            await bot.send_message(group_reports_recipient, mssg_txt)
         else:
             mssg_txt = f'Сегодня в группе "{group_name}" отсутствуют:\n'
             group_members.sort()
             mssg_txt += ";\n".join(group_members)
             mssg_txt += "."
 
-            if not await send_message(group_reports_recipient, mssg_txt):
-                mssg_txt = "Невозможно отправить отчёт получателю."
-
-                await callback.answer(mssg_txt)
-
-                return
+            await bot.send_message(group_reports_recipient, mssg_txt)
 
         mssg_txt = "Отчёт успешно отправлен."
 
@@ -163,18 +146,6 @@ async def get_group_members(callback: CallbackQuery, state: FSMContext) -> None:
             mssg_txt = f'Участник "{group_member}" уже добавлен в отчёт.'
 
             await callback.answer(mssg_txt)
-
-
-# Процедура для отправки сообщения пользователю
-async def send_message(chat_id: int, text: str) -> bool:
-    async with ClientSession() as session:
-        url = f'https://api.telegram.org/bot{getenv("BOT_TOKEN")}/sendMessage'
-        data = {"chat_id": chat_id, "text": text}
-
-        async with session.post(url, json=data) as response:
-            if response.status == 200:
-                return True
-            return False
 
 
 # Обработка команды "/getstatistics"
@@ -338,7 +309,9 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
     if date_from in ["Неделя", "Месяц", "Год"]:
         await state.clear()
 
-        reports_file = await Report_Requests.get_file(group_name, reports_recipient, date_from)
+        reports_file = await Report_Requests.get_file(
+            group_name, reports_recipient, date_from
+        )
         markup = ReplyKeyboardRemove()
 
         await message.answer_document(reports_file, reply_markup=markup)

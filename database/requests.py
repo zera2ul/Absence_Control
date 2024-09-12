@@ -8,6 +8,7 @@ from sqlalchemy import select, update
 
 
 # Подключение пользовательских модулей
+from bot import bot
 from database.models import session, User, Group, Report
 
 
@@ -391,9 +392,9 @@ class Report_Requests:
                 group_name, group_reports_recipient_tg_id
             )
             group_id: int = group.id
-            # Получение имени создателя группы
-            # Получение имени создателя группы
-            # Получение имени создателя группы
+            group_creator_name: str = (await bot.get_chat(
+                await User_Requests.get_tg_id(group.creator)
+            )).username
             group_reports_recipient_utc_offset: int = (
                 await User_Requests.get(group_reports_recipient_tg_id)
             ).utc_offset
@@ -431,7 +432,7 @@ class Report_Requests:
             )
 
             for report in reports:
-                data: list = [report.date, group_name, report.members]
+                data: list = [group_name, group_creator_name, report.date, report.members]
                 # Создание файла reports.xlsx
                 # Создание файла reports.xlsx
                 # Создание файла reports.xlsx
