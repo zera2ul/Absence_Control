@@ -156,10 +156,15 @@ class Group_Requests:
 
             return group
 
-    # Метод класса ля получения статистики о отсутствии участников группы по её имени, Телеграм id получателя отчётов и периоду времени, для которого она получается
+    # Метод класса для получения статистики о отсутствии участников группы по её имени, Телеграм id получателя отчётов и
+    # датам начала и конца периода времени, для которого она получается
     @classmethod
     async def get_statistics(
-        cls, name: str, reports_recipient_tg_id: int, time_period: str
+        cls,
+        name: str,
+        reports_recipient_tg_id: int,
+        date_from: str,
+        date_to: str = None,
     ) -> str:
         async with session() as sess:
             id = (await cls.get_by_reports_recipient(name, reports_recipient_tg_id)).id
@@ -167,22 +172,30 @@ class Group_Requests:
                 await User_Requests.get(reports_recipient_tg_id)
             ).utc_offset
 
-            if time_period == "Неделя":
+            if date_from == "Неделя":
                 date_from: Date = await Datetime_Handler.get_start_of_week(
                     reports_recipient_utc_offset
                 )
-            elif time_period == "Месяц":
+                date_to: Date = await Datetime_Handler.get_local_date(
+                    reports_recipient_utc_offset
+                )
+            elif date_from == "Месяц":
                 date_from: Date = await Datetime_Handler.get_start_of_month(
                     reports_recipient_utc_offset
                 )
-            else:
+                date_to: Date = await Datetime_Handler.get_local_date(
+                    reports_recipient_utc_offset
+                )
+            elif date_from == "year":
                 date_from: Date = await Datetime_Handler.get_start_of_year(
                     reports_recipient_utc_offset
                 )
-
-            date_to: Date = await Datetime_Handler.get_local_date(
-                reports_recipient_utc_offset
-            )
+                date_to: Date = await Datetime_Handler.get_local_date(
+                    reports_recipient_utc_offset
+                )
+            else:
+                date_from: Date = datetime.strptime(date_from, "%d.%m.%Y")
+                date_to: Date = datetime.strptime(date_to, "%d.%m.%Y")
 
             reports = await sess.scalars(
                 select(Report)

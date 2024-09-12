@@ -64,4 +64,5 @@ class Create_Statistics(StatesGroup):
     """Класс для описания состояния бота, когда он создаёт статистику об отсутствии участников группы"""
 
     group_name = State()
-    period = State()
+    date_from = State()
+    date_to = State()
