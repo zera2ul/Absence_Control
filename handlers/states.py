@@ -66,3 +66,12 @@ class Create_Statistics(StatesGroup):
     group_name = State()
     date_from = State()
     date_to = State()
+
+
+# Класс для описания состояния бота, когда он создаёт файл с отчётами об отсутствии участников групп
+class Create_Reports_File(StatesGroup):
+    """Класс для описания состояния бота, когда он создаёт файл с отчётами об отсутствии участников групп"""
+
+    group_name = State()
+    date_from = State()
+    date_to = State()

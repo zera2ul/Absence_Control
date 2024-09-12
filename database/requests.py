@@ -45,6 +45,31 @@ class Datetime_Handler:
 
         return date
 
+    @staticmethod
+    async def validate_date(date: str) -> bool:
+        parts = date.split(".")
+
+        if len(parts) != 3:
+            return False
+
+        day, month, year = parts
+
+        try:
+            day = int(day)
+            month = int(month)
+            year = int(year)
+        except ValueError:
+            return False
+
+        if not 1 <= day <= 31:
+            return False
+        if not 1 <= month <= 12:
+            return False
+        if not 2000 <= year < 3000:
+            return False
+
+        return True
+
 
 # Класс для описания запросов о пользователе базу данных
 class User_Requests:
@@ -186,7 +211,7 @@ class Group_Requests:
                 date_to: Date = await Datetime_Handler.get_local_date(
                     reports_recipient_utc_offset
                 )
-            elif date_from == "year":
+            elif date_from == "Год":
                 date_from: Date = await Datetime_Handler.get_start_of_year(
                     reports_recipient_utc_offset
                 )
@@ -351,6 +376,65 @@ class Report_Requests:
             )
 
             return report
+
+    # Статический метод для получения файла отчётов из базы данных по Telegram id создателя группы, её имени и датам начала и конца промежутка времени,
+    # для которого получается файл
+    @staticmethod
+    async def get_file(
+        group_name: str,
+        group_reports_recipient_tg_id: int,
+        date_from: str,
+        date_to: str = None,
+    ):
+        async with session() as sess:
+            group = await Group_Requests.get_by_reports_recipient(
+                group_name, group_reports_recipient_tg_id
+            )
+            group_id: int = group.id
+            # Получение имени создателя группы
+            # Получение имени создателя группы
+            # Получение имени создателя группы
+            group_reports_recipient_utc_offset: int = (
+                await User_Requests.get(group_reports_recipient_tg_id)
+            ).utc_offset
+
+            if date_from == "Неделя":
+                date_from: Date = await Datetime_Handler.get_start_of_week(
+                    group_reports_recipient_utc_offset
+                )
+                date_to: Date = await Datetime_Handler.get_local_date(
+                    group_reports_recipient_utc_offset
+                )
+            elif date_from == "Месяц":
+                date_from: Date = await Datetime_Handler.get_start_of_month(
+                    group_reports_recipient_utc_offset
+                )
+                date_to: Date = await Datetime_Handler.get_local_date(
+                    group_reports_recipient_utc_offset
+                )
+            elif date_from == "Год":
+                date_from: Date = await Datetime_Handler.get_start_of_year(
+                    group_reports_recipient_utc_offset
+                )
+                date_to: Date = await Datetime_Handler.get_local_date(
+                    group_reports_recipient_utc_offset
+                )
+            else:
+                date_from: Date = datetime.strptime(date_from, "%d.%m.%Y")
+                date_to: Date = datetime.strptime(date_to, "%d.%m.%Y")
+
+            reports: list[Report] = await sess.scalars(
+                select(Report)
+                .where(Report.group == group_id)
+                .where(Report.date >= date_from)
+                .where(Report.date <= date_to)
+            )
+
+            for report in reports:
+                data: list = [report.date, group_name, report.members]
+                # Создание файла reports.xlsx
+                # Создание файла reports.xlsx
+                # Создание файла reports.xlsx
 
     # Статический метод для создания сегодняшнего отчёта в базе данных по Телеграм id создателя группы, её имени и списку участников отчёта
     async def create(

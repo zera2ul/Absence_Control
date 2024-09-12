@@ -16,9 +16,14 @@ from aiogram.fsm.context import FSMContext
 
 # Подключение пользовательских модулей
 from handlers.middleware import Middleware
-from handlers.states import Create_Report, Create_Statistics
+from handlers.states import Create_Report, Create_Statistics, Create_Reports_File
 from handlers.markups import create_reply_markup, create_report_markup
-from database.requests import User_Requests, Group_Requests, Report_Requests
+from database.requests import (
+    Datetime_Handler,
+    User_Requests,
+    Group_Requests,
+    Report_Requests,
+)
 
 
 # Настройка работы файла
@@ -217,31 +222,6 @@ async def get_group_name(message: Message, state: FSMContext) -> None:
     await message.answer(mssg_txt, reply_markup=markup)
 
 
-async def validate_date(date: str) -> bool:
-    parts = date.split(".")
-
-    if len(parts) != 3:
-        return False
-
-    day, month, year = parts
-
-    try:
-        day = int(day)
-        month = int(month)
-        year = int(year)
-    except ValueError:
-        return False
-
-    if not 1 <= day <= 31:
-        return False
-    if not 1 <= month <= 12:
-        return False
-    if not 2000 <= year < 3000:
-        return False
-
-    return True
-
-
 # Получение начала периода времени от пользователя
 @work_router.message(Create_Statistics.date_from)
 async def get_date_from(message: Message, state: FSMContext) -> None:
@@ -259,7 +239,7 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
 
         await message.answer(mssg_txt, reply_markup=markup)
     else:
-        if await validate_date(date_from):
+        if await Datetime_Handler.validate_date(date_from):
             await state.update_data(date_from=date_from)
             await state.set_state(Create_Statistics.date_to)
 
@@ -282,7 +262,7 @@ async def get_date_to(message: Message, state: FSMContext) -> None:
     date_from = data["date_from"]
     date_to = message.text.title()
 
-    if await validate_date(date_to):
+    if await Datetime_Handler.validate_date(date_to):
         if date_from <= date_to:
             await state.clear()
 
@@ -300,3 +280,78 @@ async def get_date_to(message: Message, state: FSMContext) -> None:
         mssg_txt = "Неверный формат даты, отправьте другую."
 
         await message.answer(mssg_txt)
+
+
+# Обработка команды "/getreportsfile"
+@work_router.message(Command("getreportsfile"))
+async def cmd_getreportsfile(message: Message, state: FSMContext) -> None:
+    groups: list[str] = await User_Requests.get_where_reports_recipient(
+        message.from_user.id
+    )
+
+    if groups == []:
+        mssg_txt = "Вы не назначены получателем отчётов ни в одной группе."
+
+        await message.answer(mssg_txt)
+
+        return
+
+    await state.set_state(Create_Reports_File.group_name)
+
+    mssg_txt = "Выберите группу из списка."
+    markup: ReplyKeyboardMarkup = create_reply_markup(groups)
+
+    await message.answer(mssg_txt, markup)
+
+
+# Получение названия группы от пользователя
+@work_router.message(Create_Reports_File.group_name)
+async def get_group_name(message: Message, state: FSMContext) -> None:
+    group_name: str = message.text.title()
+    reports_recipient: int = message.from_user.id
+
+    if not group_name in await User_Requests.get_groups_where_reports_recipient(
+        reports_recipient
+    ):
+        mssg_txt = "Вы не назначены получателем отчётов в группе с таким названием, выберите другую."
+
+        await message.answer(mssg_txt)
+
+        return
+
+    await state.update_data(group_name=group_name)
+    await state.set_state(Create_Reports_File.date_from)
+
+    mssg_txt = "Выберите период времени, или отправьте дату начала своего."
+    markup: ReplyKeyboardMarkup = await create_reply_markup(["Неделя", "Месяц", "Год"])
+
+    await message.answer(mssg_txt, reply_markup=markup)
+
+
+# Получение начала периода времени от пользователя
+@work_router.message(Create_Statistics.date_from)
+async def get_date_from(message: Message, state: FSMContext) -> None:
+    group_name: str = (await state.get_data())["group_name"]
+    reports_recipient: int = message.from_user.id
+    date_from = message.text.title()
+
+    if date_from in ["Неделя", "Месяц", "Год"]:
+        await state.clear()
+
+        reports_file = await Report_Requests.get_file(group_name, reports_recipient, date_from)
+        markup = ReplyKeyboardRemove()
+
+        await message.answer_document(reports_file, reply_markup=markup)
+    else:
+        if await Datetime_Handler.validate_date(date_from):
+            await state.update_data(date_from=date_from)
+            await state.set_state(Create_Statistics.date_to)
+
+            mssg_txt = "Отправьте дату конца промежутка времени."
+            markup = ReplyKeyboardRemove()
+
+            await message.answer(mssg_txt, reply_markup=markup)
+        else:
+            mssg_txt = "Неверный формат даты, отправьте другую."
+
+            await message.answer(mssg_txt)
