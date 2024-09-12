@@ -208,26 +208,31 @@ class Group_Requests:
                 key=lambda item: item[1],
                 reverse=True,
             )
-            cnt_report_members: int = len(reports_with_member)
+            cnt_reports_members: int = len(reports_with_member)
 
-            statistics = f'Статистика отсутствия участников группы "{name}" с {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")}.\n'
+            if cnt_reports_members == 0:
+                statistics = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{name}" отсутствующих не было.'
 
-            for i in range(cnt_report_members):
-                member: str = reports_with_member_sorted[i][0]
-                reports_with_this_member: int = reports_with_member_sorted[i][1]
-                reports_with_this_member_percentages = int(
-                    reports_with_this_member / cnt_reports * 100
-                )
+                return statistics
+            else:
+                statistics = f'Статистика отсутствия участников группы "{name}" с {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")}:\n'
 
-                statistics += f"{i + 1}. {member} - Присутствовал в {reports_with_this_member} отчётах из {cnt_reports}"
-                statistics += f"({reports_with_this_member_percentages}%)"
+                for i in range(cnt_reports_members):
+                    member: str = reports_with_member_sorted[i][0]
+                    reports_with_this_member: int = reports_with_member_sorted[i][1]
+                    reports_with_this_member_percentages = int(
+                        reports_with_this_member / cnt_reports * 100
+                    )
 
-                if i < cnt_report_members - 1:
-                    statistics += ";\n"
-                else:
-                    statistics += "."
+                    statistics += f"{i + 1}. {member} - Присутствовал в {reports_with_this_member} отчётах из {cnt_reports} "
+                    statistics += f"({reports_with_this_member_percentages}%)"
 
-            return statistics
+                    if i < cnt_reports_members - 1:
+                        statistics += ";\n"
+                    else:
+                        statistics += "."
+
+                    return statistics
 
     # Статический метод для создания (записи) группы в базе данных по Телеграм id создателя и её имени
     @staticmethod
