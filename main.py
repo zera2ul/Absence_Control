@@ -25,7 +25,8 @@ async def main() -> None:
     dp = Dispatcher()
     dp.include_routers(service_router, config_router, work_router, incorrect_router)
 
-    await dp.start_polling(bot)
+    while True:
+        await dp.start_polling(bot)
 
 
 # Запуск основной функции
