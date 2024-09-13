@@ -163,7 +163,7 @@ async def get_group_member(message: Message, state: FSMContext) -> None:
 
         await message.answer(mssg_txt)
 
-        if len(group_members) == 25:
+        if len(group_members) == 24:
             await state.clear()
 
             mssg_txt = "Добавление участников в группу прервано, так как в выбранной группе содержится максимальное количество участников."

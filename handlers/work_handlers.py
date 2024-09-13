@@ -333,3 +333,36 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
             mssg_txt = "Неверный формат даты, отправьте другую."
 
             await message.answer(mssg_txt)
+
+
+# Получение конца периода времени от пользователя
+@work_router.message(Create_Reports_File.date_to)
+async def get_date_to(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    group_name: str = data["group_name"]
+    reports_recipient: int = message.from_user.id
+    date_from = data["date_from"]
+    date_to = message.text.title()
+
+    if await Datetime_Handler.validate_date(date_to):
+        if datetime.strptime(date_from, "%d.%m.%Y") <= datetime.strptime(
+            date_to, "%d.%m.%Y"
+        ):
+            await state.clear()
+
+            reports_file: FSInputFile = await Report_Requests.get_file(
+                group_name, reports_recipient, date_from, date_to
+            )
+            markup = ReplyKeyboardRemove()
+
+            await message.answer_document(reports_file, reply_markup=markup)
+
+            remove(reports_file.path)
+        else:
+            mssg_txt = "Дата конца периода времени не может быть раньше даты его начала, отправьте другую."
+
+            await message.answer(mssg_txt)
+    else:
+        mssg_txt = "Неверный формат даты, отправьте другую."
+
+        await message.answer(mssg_txt)
