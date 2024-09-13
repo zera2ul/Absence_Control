@@ -2,6 +2,8 @@
 
 
 # Подключение модулей Python
+from os import load_dotenv
+from dotenv import getenv
 from aiogram import Router
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, ReplyKeyboardRemove
@@ -9,12 +11,15 @@ from aiogram.fsm.context import FSMContext
 
 
 # Подключение пользовательских модулей
+from bot import bot
 from handlers.middleware import Middleware
-from handlers.states import Set_Utc_Offset
+from handlers.states import Set_Utc_Offset, Send_Feedback
 from database.requests import User_Requests
 
 
 # Настройка работы файла
+load_dotenv()
+
 service_router = Router()
 service_router.message.middleware(Middleware())
 
@@ -136,3 +141,24 @@ async def get_utc_offset(message: Message, state: FSMContext) -> None:
     mssg_txt = "Смещение UTC успешно установлено."
 
     await message.answer(mssg_txt)
+
+
+# Обработка команды "/feedback"
+@service_router.message(Command("feedback"))
+async def cmd_feedback(message: Message, state: FSMContext) -> None:
+    await state.set_state(Send_Feedback.feedback)
+
+    mssg_txt = "Отправьте сообщение обратной связи."
+
+    await message.answer(mssg_txt)
+
+
+# Получение сообщения обратной связи от пользователя
+@service_router.message(Send_Feedback.feedback)
+async def get_feedback(message: Message, state: FSMContext) -> None:
+    await state.clear()
+
+    chat_id: int = getenv("OWNER_TG_ID")
+    mssg_txt: str = message.text
+
+    await bot.send_message(mssg_txt)

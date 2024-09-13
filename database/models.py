@@ -34,6 +34,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     tg_id = mapped_column(BigInteger)
     utc_offset: Mapped[int] = mapped_column()
+    cnt_feedbacks: Mapped[int] = mapped_column()
 
     groups_where_creator: Mapped[List["Group"]] = relationship(
         "Group", back_populates="creator_info", foreign_keys="Group.creator"

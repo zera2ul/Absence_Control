@@ -135,6 +135,23 @@ class User_Requests:
 
             await sess.commit()
 
+    # Статический метод для увеличения количества отправленных сообщений обратной связи пользователем
+    # в базе данных по его Телеграм id
+    @staticmethod
+    async def increase_feedback_cnt(tg_id: it) -> None:
+        async with session() as sess:
+            await sess.execute(
+                update(User)
+                .where(User.tg_id == tg_id)
+                .values(cnt_feedbacks = cnt_feedbacks + 1)
+            )
+    
+    # Статический метод для сброса количества отправленных сообщений обратной связи пользователем
+    # в базе данных по его Телеграм id
+    @staticmethod
+    async def reset_feedbacks_cnt(tg_id: int) -> None:
+        # Сброс количества отправленных сообщений обратной связи пользователем
+
 
 # Класс для описания запросов о группах в базу данных
 class Group_Requests:

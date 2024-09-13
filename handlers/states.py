@@ -75,3 +75,9 @@ class Create_Reports_File(StatesGroup):
     group_name = State()
     date_from = State()
     date_to = State()
+
+# Класс для описания состояния бота, когда он отправляет владельцу сообщение обратной связи
+class Send_Feedback(StatesGroup):
+    """Класс для описания состояния бота, когда он отправляет владельцу сообщение обратной связи"""
+
+    feedback = State()
