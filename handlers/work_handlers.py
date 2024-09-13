@@ -1,4 +1,6 @@
 # Подключение модулей Python
+from os import remove
+from datetime import datetime
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import (
@@ -7,6 +9,7 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     ReplyKeyboardRemove,
     CallbackQuery,
+    FSInputFile,
 )
 from aiogram.fsm.context import FSMContext
 
@@ -25,8 +28,6 @@ from database.requests import (
 
 
 # Настройка работы файла
-load_dotenv()
-
 work_router = Router()
 work_router.message.middleware(Middleware())
 
@@ -234,7 +235,9 @@ async def get_date_to(message: Message, state: FSMContext) -> None:
     date_to = message.text.title()
 
     if await Datetime_Handler.validate_date(date_to):
-        if date_from <= date_to:
+        if datetime.strptime(date_from, "%d.%m.%Y") <= datetime.strptime(
+            date_to, "%d.%m.%Y"
+        ):
             await state.clear()
 
             mssg_txt: str = await Group_Requests.get_statistics(
@@ -256,7 +259,7 @@ async def get_date_to(message: Message, state: FSMContext) -> None:
 # Обработка команды "/getreportsfile"
 @work_router.message(Command("getreportsfile"))
 async def cmd_getreportsfile(message: Message, state: FSMContext) -> None:
-    groups: list[str] = await User_Requests.get_where_reports_recipient(
+    groups: list[str] = await User_Requests.get_groups_where_reports_recipient(
         message.from_user.id
     )
 
@@ -270,9 +273,9 @@ async def cmd_getreportsfile(message: Message, state: FSMContext) -> None:
     await state.set_state(Create_Reports_File.group_name)
 
     mssg_txt = "Выберите группу из списка."
-    markup: ReplyKeyboardMarkup = create_reply_markup(groups)
+    markup: ReplyKeyboardMarkup = await create_reply_markup(groups)
 
-    await message.answer(mssg_txt, markup)
+    await message.answer(mssg_txt, reply_markup=markup)
 
 
 # Получение названия группы от пользователя
@@ -300,7 +303,7 @@ async def get_group_name(message: Message, state: FSMContext) -> None:
 
 
 # Получение начала периода времени от пользователя
-@work_router.message(Create_Statistics.date_from)
+@work_router.message(Create_Reports_File.date_from)
 async def get_date_from(message: Message, state: FSMContext) -> None:
     group_name: str = (await state.get_data())["group_name"]
     reports_recipient: int = message.from_user.id
@@ -309,16 +312,18 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
     if date_from in ["Неделя", "Месяц", "Год"]:
         await state.clear()
 
-        reports_file = await Report_Requests.get_file(
+        reports_file: FSInputFile = await Report_Requests.get_file(
             group_name, reports_recipient, date_from
         )
         markup = ReplyKeyboardRemove()
 
         await message.answer_document(reports_file, reply_markup=markup)
+
+        remove(reports_file.path)
     else:
         if await Datetime_Handler.validate_date(date_from):
             await state.update_data(date_from=date_from)
-            await state.set_state(Create_Statistics.date_to)
+            await state.set_state(Create_Reports_File.date_to)
 
             mssg_txt = "Отправьте дату конца промежутка времени."
             markup = ReplyKeyboardRemove()

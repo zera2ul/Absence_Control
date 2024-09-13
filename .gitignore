@@ -2,5 +2,6 @@
 
 /.venv
 /.env
-/database/db.sqlite3
 __pycache__
+/database/db.sqlite3
+/database/Отчёты.xlsx

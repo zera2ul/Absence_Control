@@ -4,7 +4,10 @@
 # Подключение модулей Python
 from datetime import datetime, date as Date, timezone, timedelta
 from dateutil.relativedelta import relativedelta
+from aiogram.types import FSInputFile
 from sqlalchemy import select, update
+from openpyxl import Workbook
+from openpyxl.styles import Alignment
 
 
 # Подключение пользовательских модулей
@@ -48,28 +51,11 @@ class Datetime_Handler:
 
     @staticmethod
     async def validate_date(date: str) -> bool:
-        parts = date.split(".")
-
-        if len(parts) != 3:
-            return False
-
-        day, month, year = parts
-
         try:
-            day = int(day)
-            month = int(month)
-            year = int(year)
+            datetime.strptime(date, "%d.%m.%Y")
+            return True
         except ValueError:
             return False
-
-        if not 1 <= day <= 31:
-            return False
-        if not 1 <= month <= 12:
-            return False
-        if not 2000 <= year < 3000:
-            return False
-
-        return True
 
 
 # Класс для описания запросов о пользователе базу данных
@@ -220,8 +206,8 @@ class Group_Requests:
                     reports_recipient_utc_offset
                 )
             else:
-                date_from: Date = datetime.strptime(date_from, "%d.%m.%Y")
-                date_to: Date = datetime.strptime(date_to, "%d.%m.%Y")
+                date_from: Date = datetime.strptime(date_from, "%d.%m.%Y").date()
+                date_to: Date = datetime.strptime(date_to, "%d.%m.%Y").date()
 
             reports = await sess.scalars(
                 select(Report)
@@ -247,7 +233,7 @@ class Group_Requests:
                 key=lambda item: item[1],
                 reverse=True,
             )
-            cnt_reports_members: int = len(reports_with_member)
+            cnt_reports_members: int = len(reports_with_member_sorted)
 
             if cnt_reports_members == 0:
                 statistics = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{name}" отсутствующих не было.'
@@ -271,7 +257,7 @@ class Group_Requests:
                     else:
                         statistics += "."
 
-                    return statistics
+                return statistics
 
     # Статический метод для создания (записи) группы в базе данных по Телеграм id создателя и её имени
     @staticmethod
@@ -386,15 +372,15 @@ class Report_Requests:
         group_reports_recipient_tg_id: int,
         date_from: str,
         date_to: str = None,
-    ):
+    ) -> FSInputFile:
         async with session() as sess:
             group = await Group_Requests.get_by_reports_recipient(
                 group_name, group_reports_recipient_tg_id
             )
             group_id: int = group.id
-            group_creator_name: str = (await bot.get_chat(
-                await User_Requests.get_tg_id(group.creator)
-            )).username
+            group_creator_name: str = (
+                await bot.get_chat(await User_Requests.get_tg_id(group.creator))
+            ).username
             group_reports_recipient_utc_offset: int = (
                 await User_Requests.get(group_reports_recipient_tg_id)
             ).utc_offset
@@ -424,18 +410,53 @@ class Report_Requests:
                 date_from: Date = datetime.strptime(date_from, "%d.%m.%Y")
                 date_to: Date = datetime.strptime(date_to, "%d.%m.%Y")
 
-            reports: list[Report] = await sess.scalars(
+            reports = await sess.scalars(
                 select(Report)
                 .where(Report.group == group_id)
                 .where(Report.date >= date_from)
                 .where(Report.date <= date_to)
             )
 
+            cnt_reports = 0
+            report_dates: list[str] = []
+            report_members: list[str] = []
+
             for report in reports:
-                data: list = [group_name, group_creator_name, report.date, report.members]
-                # Создание файла reports.xlsx
-                # Создание файла reports.xlsx
-                # Создание файла reports.xlsx
+                cnt_reports += 1
+                report_dates.append(report.date.strftime("%d.%m.%Y"))
+                report_members.append(report.members.replace(";\n", "\n"))
+
+            file_name = "./database/Отчёты.xlsx"
+
+            work_book = Workbook()
+            work_sheet = work_book.active
+
+            work_sheet.append(
+                [
+                    "Название группы",
+                    "Имя создателя группы",
+                    "Дата создания отчёта",
+                    "Участники отчёта",
+                ]
+            )
+            work_sheet.row_dimensions[0].height = 25
+
+            for i in range(cnt_reports):
+                work_sheet.append(
+                    [group_name, group_creator_name, report_dates[i], report_members[i]]
+                )
+                work_sheet.row_dimensions[i + 1].height = 25
+
+            for column in ["A", "B", "C", "D"]:
+                for cell in work_sheet[column]:
+                    cell.alignment = Alignment(wrap_text=True)
+                work_sheet.column_dimensions[column].width = 25
+
+            work_book.save(file_name)
+
+            file = FSInputFile(file_name)
+
+            return file
 
     # Статический метод для создания сегодняшнего отчёта в базе данных по Телеграм id создателя группы, её имени и списку участников отчёта
     async def create(
