@@ -351,6 +351,7 @@ class Report_Requests:
     """Класс для описания запросов об отчётах группы в базу данных"""
 
     # Статический метод для получения объекта сегодняшнего отчёта из базы данных по Телеграм id создателя группы и её имени
+    @staticmethod
     async def get(group_creator_tg_id: int, group_name: str) -> Report:
         async with session() as sess:
             user: User | None = await User_Requests.get(group_creator_tg_id)
@@ -430,6 +431,7 @@ class Report_Requests:
 
             work_book = Workbook()
             work_sheet = work_book.active
+            work_sheet.title = "Отчёты"
 
             work_sheet.append(
                 [
@@ -439,13 +441,13 @@ class Report_Requests:
                     "Участники отчёта",
                 ]
             )
-            work_sheet.row_dimensions[0].height = 25
+            work_sheet.row_dimensions[1].height = 30
 
             for i in range(cnt_reports):
                 work_sheet.append(
                     [group_name, group_creator_name, report_dates[i], report_members[i]]
                 )
-                work_sheet.row_dimensions[i + 1].height = 25
+                work_sheet.row_dimensions[i + 2].height = 30
 
             for column in ["A", "B", "C", "D"]:
                 for cell in work_sheet[column]:
