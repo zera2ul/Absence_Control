@@ -77,7 +77,7 @@ async def cmd_help(message: Message) -> None:
     mssg_txt2 += (
         "/createreport - Создать и отправить отчёт об отсутствии участников группы;\n"
     )
-    mssg_txt2 += "/getstatistics - Получить статистику об отсутствии участников группы."
+    mssg_txt2 += "/getstatistics - Получить статистику об отсутствии участников группы.\n"
     mssg_txt2 += "/getreportsfile - Получить файл отчётов об отсутствии участников групп"
 
     mssg_txt: str = mssg_txt1 + mssg_txt2
