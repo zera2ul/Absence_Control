@@ -165,6 +165,8 @@ async def cmd_feedback(message: Message, state: FSMContext) -> None:
 # Получение отзыва от пользователя
 @service_router.message(Send_Feedback.feedback)
 async def get_feedback(message: Message, state: FSMContext) -> None:
+    await state.clear()
+
     await User_Requests.increase_feedbacks_cnt(message.from_user.id)
 
     chat_id: int = int(getenv("OWNER_TG_ID"))
