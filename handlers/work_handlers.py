@@ -17,7 +17,7 @@ from aiogram.fsm.context import FSMContext
 # Подключение пользовательских модулей
 from bot import bot
 from handlers.middleware import Middleware
-from handlers.states import Create_Report, Create_Statistics, Create_Reports_File
+from handlers.states import Create_Report, Get_Statistics, Get_Reports_File
 from handlers.markups import create_reply_markup, create_report_markup
 from database.requests import (
     Datetime_Handler,
@@ -162,7 +162,7 @@ async def cmd_getstatistics(message: Message, state: FSMContext) -> None:
 
         return
 
-    await state.set_state(Create_Statistics.group_name)
+    await state.set_state(Get_Statistics.group_name)
 
     mssg_txt = "Выберите группу из списка."
     markup: ReplyKeyboardMarkup = await create_reply_markup(groups)
@@ -171,7 +171,7 @@ async def cmd_getstatistics(message: Message, state: FSMContext) -> None:
 
 
 # Получение названия группы от пользователя
-@work_router.message(Create_Statistics.group_name)
+@work_router.message(Get_Statistics.group_name)
 async def get_group_name(message: Message, state: FSMContext) -> None:
     group_name: str = message.text.title()
     reports_recipient: int = message.from_user.id
@@ -186,7 +186,7 @@ async def get_group_name(message: Message, state: FSMContext) -> None:
         return
 
     await state.update_data(group_name=group_name)
-    await state.set_state(Create_Statistics.date_from)
+    await state.set_state(Get_Statistics.date_from)
 
     mssg_txt = "Выберите период времени, или отправьте дату начала своего."
     markup: ReplyKeyboardMarkup = await create_reply_markup(["Неделя", "Месяц", "Год"])
@@ -195,7 +195,7 @@ async def get_group_name(message: Message, state: FSMContext) -> None:
 
 
 # Получение начала периода времени от пользователя
-@work_router.message(Create_Statistics.date_from)
+@work_router.message(Get_Statistics.date_from)
 async def get_date_from(message: Message, state: FSMContext) -> None:
     group_name: str = (await state.get_data())["group_name"]
     reports_recipient: int = message.from_user.id
@@ -213,7 +213,7 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
     else:
         if await Datetime_Handler.validate_date(date_from):
             await state.update_data(date_from=date_from)
-            await state.set_state(Create_Statistics.date_to)
+            await state.set_state(Get_Statistics.date_to)
 
             mssg_txt = "Отправьте дату конца промежутка времени."
             markup = ReplyKeyboardRemove()
@@ -226,7 +226,7 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
 
 
 # Получение конца периода времени от пользователя
-@work_router.message(Create_Statistics.date_to)
+@work_router.message(Get_Statistics.date_to)
 async def get_date_to(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     group_name: str = data["group_name"]
@@ -270,7 +270,7 @@ async def cmd_getreportsfile(message: Message, state: FSMContext) -> None:
 
         return
 
-    await state.set_state(Create_Reports_File.group_name)
+    await state.set_state(Get_Reports_File.group_name)
 
     mssg_txt = "Выберите группу из списка."
     markup: ReplyKeyboardMarkup = await create_reply_markup(groups)
@@ -279,7 +279,7 @@ async def cmd_getreportsfile(message: Message, state: FSMContext) -> None:
 
 
 # Получение названия группы от пользователя
-@work_router.message(Create_Reports_File.group_name)
+@work_router.message(Get_Reports_File.group_name)
 async def get_group_name(message: Message, state: FSMContext) -> None:
     group_name: str = message.text.title()
     reports_recipient: int = message.from_user.id
@@ -294,7 +294,7 @@ async def get_group_name(message: Message, state: FSMContext) -> None:
         return
 
     await state.update_data(group_name=group_name)
-    await state.set_state(Create_Reports_File.date_from)
+    await state.set_state(Get_Reports_File.date_from)
 
     mssg_txt = "Выберите период времени, или отправьте дату начала своего."
     markup: ReplyKeyboardMarkup = await create_reply_markup(["Неделя", "Месяц", "Год"])
@@ -303,7 +303,7 @@ async def get_group_name(message: Message, state: FSMContext) -> None:
 
 
 # Получение начала периода времени от пользователя
-@work_router.message(Create_Reports_File.date_from)
+@work_router.message(Get_Reports_File.date_from)
 async def get_date_from(message: Message, state: FSMContext) -> None:
     group_name: str = (await state.get_data())["group_name"]
     reports_recipient: int = message.from_user.id
@@ -323,7 +323,7 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
     else:
         if await Datetime_Handler.validate_date(date_from):
             await state.update_data(date_from=date_from)
-            await state.set_state(Create_Reports_File.date_to)
+            await state.set_state(Get_Reports_File.date_to)
 
             mssg_txt = "Отправьте дату конца промежутка времени."
             markup = ReplyKeyboardRemove()
@@ -336,7 +336,7 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
 
 
 # Получение конца периода времени от пользователя
-@work_router.message(Create_Reports_File.date_to)
+@work_router.message(Get_Reports_File.date_to)
 async def get_date_to(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     group_name: str = data["group_name"]
