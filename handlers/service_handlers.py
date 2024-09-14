@@ -2,8 +2,8 @@
 
 
 # Подключение модулей Python
-from os import load_dotenv
-from dotenv import getenv
+from os import getenv
+from dotenv import load_dotenv
 from aiogram import Router
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, ReplyKeyboardRemove
@@ -146,19 +146,35 @@ async def get_utc_offset(message: Message, state: FSMContext) -> None:
 # Обработка команды "/feedback"
 @service_router.message(Command("feedback"))
 async def cmd_feedback(message: Message, state: FSMContext) -> None:
+    feedbacks_cnt: int = (await User_Requests.get(message.from_user.id)).feedbacks_cnt
+
+    if feedbacks_cnt == 5:
+        mssg_txt = "Вы уже отправили максимальное количество отзывов за день."
+
+        await message.answer(mssg_txt)
+
+        return
+
     await state.set_state(Send_Feedback.feedback)
 
-    mssg_txt = "Отправьте сообщение обратной связи."
+    mssg_txt = "Отправьте отзыв."
 
     await message.answer(mssg_txt)
 
 
-# Получение сообщения обратной связи от пользователя
+# Получение отзыва от пользователя
 @service_router.message(Send_Feedback.feedback)
 async def get_feedback(message: Message, state: FSMContext) -> None:
     await state.clear()
 
-    chat_id: int = getenv("OWNER_TG_ID")
-    mssg_txt: str = message.text
+    await User_Requests.increase_feedbacks_cnt(message.from_user.id)
 
-    await bot.send_message(mssg_txt)
+    chat_id: int = getenv("OWNER_TG_ID")
+    user_name: str = message.from_user.username
+    mssg_txt: str = f"Отзыв от пользователя @{user_name}.\n\n"
+    mssg_txt += message.text
+
+    await bot.send_message(chat_id, mssg_txt)
+
+    mssg_txt = "Отзыв успешно отправлен."
+    await message.answer(mssg_txt)

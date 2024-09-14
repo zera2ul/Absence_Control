@@ -121,7 +121,9 @@ class User_Requests:
             if user is None:
                 default_utc_offset = 10800
 
-                sess.add(User(tg_id=tg_id, utc_offset=default_utc_offset))
+                sess.add(
+                    User(tg_id=tg_id, utc_offset=default_utc_offset, feedbacks_cnt=0)
+                )
 
                 await sess.commit()
 
@@ -135,22 +137,26 @@ class User_Requests:
 
             await sess.commit()
 
-    # Статический метод для увеличения количества отправленных сообщений обратной связи пользователем
+    # Статический метод для увеличения количества отправленных отзывов пользователем
     # в базе данных по его Телеграм id
     @staticmethod
-    async def increase_feedback_cnt(tg_id: it) -> None:
+    async def increase_feedbacks_cnt(tg_id: int) -> None:
         async with session() as sess:
             await sess.execute(
                 update(User)
                 .where(User.tg_id == tg_id)
-                .values(cnt_feedbacks = cnt_feedbacks + 1)
+                .values(feedbacks_cnt=User.feedbacks_cnt + 1)
             )
-    
-    # Статический метод для сброса количества отправленных сообщений обратной связи пользователем
-    # в базе данных по его Телеграм id
+
+            await sess.commit()
+
+    # Статический метод для сброса количества отправленных отзывов пользователями в базе данных
     @staticmethod
-    async def reset_feedbacks_cnt(tg_id: int) -> None:
-        # Сброс количества отправленных сообщений обратной связи пользователем
+    async def reset_feedbacks_cnt() -> None:
+        async with session() as sess:
+            await sess.execute(update(User).values(feedbacks_cnt=0))
+
+            await sess.commit()
 
 
 # Класс для описания запросов о группах в базу данных
