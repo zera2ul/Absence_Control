@@ -68,7 +68,7 @@ async def cmd_help(message: Message) -> None:
     mssg_txt2 += "/help - Получить справочную информацию;\n"
     mssg_txt2 += "/cancel - Отменить выполнение текущей команды;\n"
     mssg_txt2 += "/setutcoffset - Указать смещение UTC в вашем часовом поясе;\n"
-    mssg_txt2 += "/feedback - Отправить отзыв о боте его владельцу"
+    mssg_txt2 += "/feedback - Отправить отзыв о боте его владельцу\n"
     mssg_txt2 += "/creategroup - Создать группу;\n"
     mssg_txt2 += "/addmembers - Добавить участников в группу;\n"
     mssg_txt2 += "/deletegroup - Удалить группу;\n"
