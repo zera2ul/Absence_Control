@@ -49,10 +49,14 @@ class Datetime_Handler:
 
         return date
 
-    @staticmethod
-    async def validate_date(date: str) -> bool:
+    @classmethod
+    async def validate_date(cls, utc_offset: int, date: str) -> bool:
         try:
-            datetime.strptime(date, "%d.%m.%Y")
+            date: Date = datetime.strptime(date, "%d.%m.%Y").date()
+
+            if date > await cls.get_local_date(utc_offset):
+                return False
+
             return True
         except ValueError:
             return False
