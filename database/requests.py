@@ -396,7 +396,7 @@ class Report_Requests:
         group_reports_recipient_tg_id: int,
         date_from: str,
         date_to: str = None,
-    ) -> FSInputFile:
+    ) -> FSInputFile | str:
         async with session() as sess:
             group = await Group_Requests.get_by_reports_recipient(
                 group_name, group_reports_recipient_tg_id
@@ -450,6 +450,11 @@ class Report_Requests:
                 report_dates.append(report.date.strftime("%d.%m.%Y"))
                 report_members.append(report.members.replace(";\n", "\n"))
 
+            if cnt_reports == 0:
+                mssg_txt = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{group_name}" не создавалось отчётов об отсутствии.'
+
+                return mssg_txt
+    
             file_name = "./database/Отчёты.xlsx"
 
             work_book = Workbook()

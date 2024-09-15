@@ -312,14 +312,17 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
     if date_from in ["Неделя", "Месяц", "Год"]:
         await state.clear()
 
-        reports_file: FSInputFile = await Report_Requests.get_file(
+        reports_file: FSInputFile | str = await Report_Requests.get_file(
             group_name, reports_recipient, date_from
         )
         markup = ReplyKeyboardRemove()
 
-        await message.answer_document(reports_file, reply_markup=markup)
+        if type(reports_file) == FSInputFile:
+            await message.answer_document(reports_file, reply_markup=markup)
 
-        remove(reports_file.path)
+            remove(reports_file.path)
+        else:
+            await message.answer(reports_file, reply_markup=markup)
     else:
         if await Datetime_Handler.validate_date(date_from):
             await state.update_data(date_from=date_from)
@@ -350,14 +353,17 @@ async def get_date_to(message: Message, state: FSMContext) -> None:
         ):
             await state.clear()
 
-            reports_file: FSInputFile = await Report_Requests.get_file(
+            reports_file: FSInputFile | str = await Report_Requests.get_file(
                 group_name, reports_recipient, date_from, date_to
             )
             markup = ReplyKeyboardRemove()
 
-            await message.answer_document(reports_file, reply_markup=markup)
+            if type(reports_file) == FSInputFile:
+                await message.answer_document(reports_file, reply_markup=markup)
 
-            remove(reports_file.path)
+                remove(reports_file.path)
+            else:
+                await message.answer(reports_file, reply_markup=markup)
         else:
             mssg_txt = "Дата конца периода времени не может быть раньше даты его начала, отправьте другую."
 
