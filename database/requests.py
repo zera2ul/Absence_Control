@@ -49,6 +49,7 @@ class Datetime_Handler:
 
         return date
 
+    # Метод класса для валидации даты в часовом поясе по смещению UTC и самой дате
     @classmethod
     async def validate_date(cls, utc_offset: int, date: str) -> bool:
         try:
