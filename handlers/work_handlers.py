@@ -322,10 +322,10 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
 
         if type(reports_file) == FSInputFile:
             await message.answer_document(reports_file, reply_markup=markup)
-        else:
-            await message.answer(reports_file, reply_markup=markup)        
 
-        remove(reports_file.path)
+            remove(reports_file.path)
+        else:
+            await message.answer(reports_file, reply_markup=markup)
     else:
         if await Datetime_Handler.validate_date(utc_offset, date_from):
             await state.update_data(date_from=date_from)
