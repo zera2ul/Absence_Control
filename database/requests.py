@@ -251,6 +251,11 @@ class Group_Requests:
 
                     reports_with_member[member] += 1
 
+            if cnt_reports == 0:
+                statistics = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{name}" не создавалось отчётов об отсутствии.'
+
+                return statistics
+
             reports_with_member_sorted: list = sorted(
                 reports_with_member.items(),
                 key=lambda item: item[1],
@@ -454,7 +459,7 @@ class Report_Requests:
                 mssg_txt = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{group_name}" не создавалось отчётов об отсутствии.'
 
                 return mssg_txt
-    
+
             file_name = "./database/Отчёты.xlsx"
 
             work_book = Workbook()
