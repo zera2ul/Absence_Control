@@ -49,10 +49,15 @@ class Datetime_Handler:
 
         return date
 
-    @staticmethod
-    async def validate_date(date: str) -> bool:
+    # Метод класса для валидации даты в часовом поясе по смещению UTC и самой дате
+    @classmethod
+    async def validate_date(cls, utc_offset: int, date: str) -> bool:
         try:
-            datetime.strptime(date, "%d.%m.%Y")
+            date: Date = datetime.strptime(date, "%d.%m.%Y").date()
+
+            if date > await cls.get_local_date(utc_offset):
+                return False
+            
             return True
         except ValueError:
             return False
@@ -251,6 +256,11 @@ class Group_Requests:
 
                     reports_with_member[member] += 1
 
+            if cnt_reports == 0:
+                statistics = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{name}" не создавалось отчётов об отсутствии.'
+
+                return statistics
+
             reports_with_member_sorted: list = sorted(
                 reports_with_member.items(),
                 key=lambda item: item[1],
@@ -396,7 +406,7 @@ class Report_Requests:
         group_reports_recipient_tg_id: int,
         date_from: str,
         date_to: str = None,
-    ) -> FSInputFile:
+    ) -> FSInputFile | str:
         async with session() as sess:
             group = await Group_Requests.get_by_reports_recipient(
                 group_name, group_reports_recipient_tg_id
@@ -449,6 +459,11 @@ class Report_Requests:
                 cnt_reports += 1
                 report_dates.append(report.date.strftime("%d.%m.%Y"))
                 report_members.append(report.members.replace(";\n", "\n"))
+
+            if cnt_reports == 0:
+                mssg_txt = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{group_name}" не создавалось отчётов об отсутствии.'
+
+                return mssg_txt
 
             file_name = "./database/Отчёты.xlsx"
 

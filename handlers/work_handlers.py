@@ -67,7 +67,7 @@ async def get_group_name(message: Message, state: FSMContext) -> None:
         await message.answer(mssg_txt)
 
         return
-    elif group_members == []:
+    elif group_members == [""]:
         await state.clear()
 
         mssg_txt = "Создание отчёта отменено, так как в группе отсутствуют участники."
@@ -199,6 +199,7 @@ async def get_group_name(message: Message, state: FSMContext) -> None:
 async def get_date_from(message: Message, state: FSMContext) -> None:
     group_name: str = (await state.get_data())["group_name"]
     reports_recipient: int = message.from_user.id
+    utc_offset: int = (await User_Requests.get(reports_recipient)).utc_offset
     date_from = message.text.title()
 
     if date_from in ["Неделя", "Месяц", "Год"]:
@@ -211,7 +212,7 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
 
         await message.answer(mssg_txt, reply_markup=markup)
     else:
-        if await Datetime_Handler.validate_date(date_from):
+        if await Datetime_Handler.validate_date(utc_offset, date_from):
             await state.update_data(date_from=date_from)
             await state.set_state(Get_Statistics.date_to)
 
@@ -220,7 +221,7 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
 
             await message.answer(mssg_txt, reply_markup=markup)
         else:
-            mssg_txt = "Неверный формат даты, отправьте другую."
+            mssg_txt = "Неверная дата, отправьте другую."
 
             await message.answer(mssg_txt)
 
@@ -231,10 +232,11 @@ async def get_date_to(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     group_name: str = data["group_name"]
     reports_recipient: int = message.from_user.id
+    utc_offset: int = (await User_Requests.get(reports_recipient)).utc_offset
     date_from = data["date_from"]
     date_to = message.text.title()
 
-    if await Datetime_Handler.validate_date(date_to):
+    if await Datetime_Handler.validate_date(utc_offset, date_to):
         if datetime.strptime(date_from, "%d.%m.%Y") <= datetime.strptime(
             date_to, "%d.%m.%Y"
         ):
@@ -251,7 +253,7 @@ async def get_date_to(message: Message, state: FSMContext) -> None:
 
             await message.answer(mssg_txt)
     else:
-        mssg_txt = "Неверный формат даты, отправьте другую."
+        mssg_txt = "Неверная дата, отправьте другую."
 
         await message.answer(mssg_txt)
 
@@ -307,21 +309,25 @@ async def get_group_name(message: Message, state: FSMContext) -> None:
 async def get_date_from(message: Message, state: FSMContext) -> None:
     group_name: str = (await state.get_data())["group_name"]
     reports_recipient: int = message.from_user.id
+    utc_offset: int = (await User_Requests.get(reports_recipient)).utc_offset
     date_from = message.text.title()
 
     if date_from in ["Неделя", "Месяц", "Год"]:
         await state.clear()
 
-        reports_file: FSInputFile = await Report_Requests.get_file(
+        reports_file: FSInputFile | str = await Report_Requests.get_file(
             group_name, reports_recipient, date_from
         )
         markup = ReplyKeyboardRemove()
 
-        await message.answer_document(reports_file, reply_markup=markup)
+        if type(reports_file) == FSInputFile:
+            await message.answer_document(reports_file, reply_markup=markup)
+        else:
+            await message.answer(reports_file, reply_markup=markup)        
 
         remove(reports_file.path)
     else:
-        if await Datetime_Handler.validate_date(date_from):
+        if await Datetime_Handler.validate_date(utc_offset, date_from):
             await state.update_data(date_from=date_from)
             await state.set_state(Get_Reports_File.date_to)
 
@@ -330,7 +336,7 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
 
             await message.answer(mssg_txt, reply_markup=markup)
         else:
-            mssg_txt = "Неверный формат даты, отправьте другую."
+            mssg_txt = "Неверная дата, отправьте другую."
 
             await message.answer(mssg_txt)
 
@@ -341,28 +347,32 @@ async def get_date_to(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     group_name: str = data["group_name"]
     reports_recipient: int = message.from_user.id
+    utc_offset: int = (await User_Requests.get(reports_recipient)).utc_offset
     date_from = data["date_from"]
     date_to = message.text.title()
 
-    if await Datetime_Handler.validate_date(date_to):
+    if await Datetime_Handler.validate_date(utc_offset, date_to):
         if datetime.strptime(date_from, "%d.%m.%Y") <= datetime.strptime(
             date_to, "%d.%m.%Y"
         ):
             await state.clear()
 
-            reports_file: FSInputFile = await Report_Requests.get_file(
+            reports_file: FSInputFile | str = await Report_Requests.get_file(
                 group_name, reports_recipient, date_from, date_to
             )
             markup = ReplyKeyboardRemove()
 
-            await message.answer_document(reports_file, reply_markup=markup)
+            if type(reports_file) == FSInputFile:
+                await message.answer_document(reports_file, reply_markup=markup)
 
-            remove(reports_file.path)
+                remove(reports_file.path)
+            else:
+                await message.answer(reports_file, reply_markup=markup)
         else:
             mssg_txt = "Дата конца периода времени не может быть раньше даты его начала, отправьте другую."
 
             await message.answer(mssg_txt)
     else:
-        mssg_txt = "Неверный формат даты, отправьте другую."
+        mssg_txt = "Неверная дата, отправьте другую."
 
         await message.answer(mssg_txt)
