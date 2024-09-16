@@ -52,11 +52,11 @@ async def create_request_user_markup() -> ReplyKeyboardMarkup:
 
 
 # Функция, создающая inline разметку для создания отчёта, используя список участников группы
-async def create_report_markup(data: list[str]) -> InlineKeyboardMarkup:
+async def create_report_markup(members: list[str]) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
 
-    for element in data:
-        keyboard.add(InlineKeyboardButton(text=element, callback_data=f"r_{element}"))
+    for member in members:
+        keyboard.add(InlineKeyboardButton(text=member, callback_data=f"r_{member}"))
     keyboard.adjust(2)
     keyboard.row(InlineKeyboardButton(text="Отправить", callback_data="r_Отправить"))
     markup: InlineKeyboardMarkup = keyboard.as_markup()

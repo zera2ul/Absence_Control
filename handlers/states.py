@@ -12,6 +12,14 @@ class Set_Utc_Offset(StatesGroup):
     utc_offset = State()
 
 
+# Класс для описания состояния пользователя, когда он отправляет отзыв
+class Send_Feedback(StatesGroup):
+    """Класс для описания состояния пользователя, когда он отправляет отзыв"""
+
+    feedback = State()
+    answer = State()
+
+
 # Класс для описания состояния пользователя, когда он создаёт группу
 class Create_Group(StatesGroup):
     """Класс для описания состояния пользователя, когда он создаёт группу"""
@@ -75,11 +83,3 @@ class Get_Reports_File(StatesGroup):
     group_name = State()
     date_from = State()
     date_to = State()
-
-
-# Класс для описания состояния пользователя, когда он отправляет отзыв
-class Send_Feedback(StatesGroup):
-    """Класс для описания состояния пользователя, когда он отправляет отзыв"""
-
-    feedback = State()
-    answer = State()
