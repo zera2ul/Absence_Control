@@ -196,102 +196,6 @@ class Group_Requests:
 
             return group
 
-    # Метод класса для получения статистики о отсутствии участников группы по её имени, Телеграм id получателя отчётов и
-    # датам начала и конца периода времени, для которого она получается
-    @classmethod
-    async def get_statistics(
-        cls,
-        name: str,
-        reports_recipient_tg_id: int,
-        date_from: str,
-        date_to: str = None,
-    ) -> str:
-        async with session() as sess:
-            id = (await cls.get_by_reports_recipient(name, reports_recipient_tg_id)).id
-            reports_recipient_utc_offset: int = (
-                await User_Requests.get(reports_recipient_tg_id)
-            ).utc_offset
-
-            if date_from == "Неделя":
-                date_from: Date = await Datetime_Handler.get_start_of_week(
-                    reports_recipient_utc_offset
-                )
-                date_to: Date = await Datetime_Handler.get_local_date(
-                    reports_recipient_utc_offset
-                )
-            elif date_from == "Месяц":
-                date_from: Date = await Datetime_Handler.get_start_of_month(
-                    reports_recipient_utc_offset
-                )
-                date_to: Date = await Datetime_Handler.get_local_date(
-                    reports_recipient_utc_offset
-                )
-            elif date_from == "Год":
-                date_from: Date = await Datetime_Handler.get_start_of_year(
-                    reports_recipient_utc_offset
-                )
-                date_to: Date = await Datetime_Handler.get_local_date(
-                    reports_recipient_utc_offset
-                )
-            else:
-                date_from: Date = datetime.strptime(date_from, "%d.%m.%Y").date()
-                date_to: Date = datetime.strptime(date_to, "%d.%m.%Y").date()
-
-            reports = await sess.scalars(
-                select(Report)
-                .where(Report.group == id)
-                .where(Report.date >= date_from)
-                .where(Report.date <= date_to)
-            )
-            cnt_reports: int = 0
-            reports_with_member: dict[str, int] = {}
-
-            for report in reports:
-                cnt_reports += 1
-                report_members: list[str] = report.members.split(";\n")
-
-                for member in report_members:
-                    if not member in reports_with_member:
-                        reports_with_member[member] = 0
-
-                    reports_with_member[member] += 1
-
-            if cnt_reports == 0:
-                statistics = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{name}" не создавалось отчётов об отсутствии.'
-
-                return statistics
-
-            reports_with_member_sorted: list = sorted(
-                reports_with_member.items(),
-                key=lambda item: item[1],
-                reverse=True,
-            )
-            cnt_reports_members: int = len(reports_with_member_sorted)
-
-            if cnt_reports_members == 0:
-                statistics = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{name}" отсутствующих не было.'
-
-                return statistics
-            else:
-                statistics = f'Статистика отсутствия участников группы "{name}" с {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")}:\n'
-
-                for i in range(cnt_reports_members):
-                    member: str = reports_with_member_sorted[i][0]
-                    reports_with_this_member: int = reports_with_member_sorted[i][1]
-                    reports_with_this_member_percentages = int(
-                        reports_with_this_member / cnt_reports * 100
-                    )
-
-                    statistics += f"{i + 1}. {member} - Присутствовал в {reports_with_this_member} отчётах из {cnt_reports} "
-                    statistics += f"({reports_with_this_member_percentages}%)"
-
-                    if i < cnt_reports_members - 1:
-                        statistics += ";\n"
-                    else:
-                        statistics += "."
-
-                return statistics
-
     # Статический метод для создания (записи) группы в базе данных по Телеграм id создателя и её имени
     @staticmethod
     async def create(creator_tg_id: int, name: str) -> None:
@@ -397,6 +301,101 @@ class Report_Requests:
             )
 
             return report
+    
+    # Метод класса для получения статистики о отсутствии участников группы по её имени, Телеграм id получателя отчётов и
+    # датам начала и конца периода времени, для которого она получается
+    @classmethod
+    async def get_statistics(
+        name: str,
+        reports_recipient_tg_id: int,
+        date_from: str,
+        date_to: str = None,
+    ) -> str:
+        async with session() as sess:
+            id = (await Group_Requests.get_by_reports_recipient(name, reports_recipient_tg_id)).id
+            reports_recipient_utc_offset: int = (
+                await User_Requests.get(reports_recipient_tg_id)
+            ).utc_offset
+
+            if date_from == "Неделя":
+                date_from: Date = await Datetime_Handler.get_start_of_week(
+                    reports_recipient_utc_offset
+                )
+                date_to: Date = await Datetime_Handler.get_local_date(
+                    reports_recipient_utc_offset
+                )
+            elif date_from == "Месяц":
+                date_from: Date = await Datetime_Handler.get_start_of_month(
+                    reports_recipient_utc_offset
+                )
+                date_to: Date = await Datetime_Handler.get_local_date(
+                    reports_recipient_utc_offset
+                )
+            elif date_from == "Год":
+                date_from: Date = await Datetime_Handler.get_start_of_year(
+                    reports_recipient_utc_offset
+                )
+                date_to: Date = await Datetime_Handler.get_local_date(
+                    reports_recipient_utc_offset
+                )
+            else:
+                date_from: Date = datetime.strptime(date_from, "%d.%m.%Y").date()
+                date_to: Date = datetime.strptime(date_to, "%d.%m.%Y").date()
+
+            reports = await sess.scalars(
+                select(Report)
+                .where(Report.group == id)
+                .where(Report.date >= date_from)
+                .where(Report.date <= date_to)
+            )
+            cnt_reports: int = 0
+            reports_with_member: dict[str, int] = {}
+
+            for report in reports:
+                cnt_reports += 1
+                report_members: list[str] = report.members.split(";\n")
+
+                for member in report_members:
+                    if not member in reports_with_member:
+                        reports_with_member[member] = 0
+
+                    reports_with_member[member] += 1
+
+            if cnt_reports == 0:
+                statistics = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{name}" не создавалось отчётов об отсутствии.'
+
+                return statistics
+
+            reports_with_member_sorted: list = sorted(
+                reports_with_member.items(),
+                key=lambda item: item[1],
+                reverse=True,
+            )
+            cnt_reports_members: int = len(reports_with_member_sorted)
+
+            if cnt_reports_members == 0:
+                statistics = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{name}" отсутствующих не было.'
+
+                return statistics
+            else:
+                statistics = f'Статистика отсутствия участников группы "{name}" с {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")}:\n'
+
+                for i in range(cnt_reports_members):
+                    member: str = reports_with_member_sorted[i][0]
+                    reports_with_this_member: int = reports_with_member_sorted[i][1]
+                    reports_with_this_member_percentages = int(
+                        reports_with_this_member / cnt_reports * 100
+                    )
+
+                    statistics += f"{i + 1}. {member} - Присутствовал в {reports_with_this_member} отчётах из {cnt_reports} "
+                    statistics += f"({reports_with_this_member_percentages}%)"
+
+                    if i < cnt_reports_members - 1:
+                        statistics += ";\n"
+                    else:
+                        statistics += "."
+
+                return statistics
 
     # Статический метод для получения файла отчётов из базы данных по Telegram id создателя группы, её имени и датам начала и конца промежутка времени,
     # для которого получается файл
