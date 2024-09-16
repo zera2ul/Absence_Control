@@ -207,7 +207,7 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
     if date_from in ["Неделя", "Месяц", "Год"]:
         await state.clear()
 
-        mssg_txt: str = await Group_Requests.get_statistics(
+        mssg_txt: str = await Report_Requests.get_statistics(
             group_name, reports_recipient, date_from
         )
         markup = ReplyKeyboardRemove()
@@ -244,7 +244,7 @@ async def get_date_to(message: Message, state: FSMContext) -> None:
         ):
             await state.clear()
 
-            mssg_txt: str = await Group_Requests.get_statistics(
+            mssg_txt: str = await Report_Requests.get_statistics(
                 group_name, reports_recipient, date_from, date_to
             )
             markup = ReplyKeyboardRemove()
