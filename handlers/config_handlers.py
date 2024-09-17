@@ -148,6 +148,12 @@ async def get_group_member(message: Message, state: FSMContext) -> None:
         await message.answer(mssg_txt)
 
         return
+    elif group_member == "Отправить":
+        mssg_txt = "Участник не был добавлен, по причине неверного имени."
+
+        await message.answer(mssg_txt)
+
+        return
 
     if group_member == "Стоп":
         await state.clear()
