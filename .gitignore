@@ -4,4 +4,4 @@
 /.env
 __pycache__
 /database/database.sqlite3
-/database/Отчёты.xlsx
+
