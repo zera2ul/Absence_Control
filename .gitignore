@@ -3,5 +3,4 @@
 /.venv
 /.env
 __pycache__
-/database/db.sqlite3
-/database/Отчёты.xlsx
+/database/database.sqlite3
