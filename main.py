@@ -26,7 +26,7 @@ async def main() -> None:
     dp.include_routers(service_router, config_router, work_router, incorrect_router)
 
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(User_Requests.reset_feedbacks_cnt, CronTrigger(hour=0, minute=0))
+    scheduler.add_job(User_Requests.reset_feedbacks_cnt, CronTrigger(hour=4, minute=0))
     scheduler.start()
 
     await dp.start_polling(bot)
