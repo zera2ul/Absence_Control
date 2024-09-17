@@ -4,4 +4,3 @@
 /.env
 __pycache__
 /database/database.sqlite3
-
