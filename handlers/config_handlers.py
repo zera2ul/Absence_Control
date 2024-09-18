@@ -148,8 +148,16 @@ async def get_group_member(message: Message, state: FSMContext) -> None:
         await message.answer(mssg_txt)
 
         return
+    elif ";" in group_member:
+        mssg_txt = (
+            "Участник не был добавлен, по причине наличия запрещённого символа в имени"
+        )
+
+        await message.answer(mssg_txt)
+
+        return
     elif group_member == "Отправить":
-        mssg_txt = "Участник не был добавлен, по причине неверного имени."
+        mssg_txt = "Участник не был добавлен, по причине запрещённого имени."
 
         await message.answer(mssg_txt)
 
