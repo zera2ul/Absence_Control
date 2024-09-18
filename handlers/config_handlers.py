@@ -97,9 +97,6 @@ async def cmd_addmembers(message: Message, state: FSMContext) -> None:
 async def get_group_name(message: Message, state: FSMContext) -> None:
     group_creator: int = message.from_user.id
     group_name: str = message.text.title()
-    group_members: list[str] = (
-        await Group_Requests.get_by_creator(group_creator, group_name)
-    ).members.split(";\n")
 
     if await Group_Requests.get_by_creator(group_creator, group_name) is None:
         mssg_txt = "Вы не создавали группу с таким названием, введите другое."
@@ -107,7 +104,12 @@ async def get_group_name(message: Message, state: FSMContext) -> None:
         await message.answer(mssg_txt)
 
         return
-    elif len(group_members) == 25:
+
+    group_members: list[str] = (
+        await Group_Requests.get_by_creator(group_creator, group_name)
+    ).members.split(";\n")
+
+    if len(group_members) == 25:
         await state.clear()
 
         mssg_txt = "Добавление участников в группу прервано, так как в выбранной группе содержится максимальное количество участников."
@@ -288,9 +290,6 @@ async def cmd_removemembers(message: Message, state: FSMContext) -> None:
 async def get_group_name(message: Message, state: FSMContext) -> None:
     group_creator: int = message.from_user.id
     group_name: str = message.text.title()
-    group_members: list[str] = (
-        await Group_Requests.get_by_creator(group_creator, group_name)
-    ).members.split(";\n")
 
     if await Group_Requests.get_by_creator(group_creator, group_name) is None:
         mssg_txt = "Вы не создавали группу с таким названием, введите другое."
@@ -298,7 +297,12 @@ async def get_group_name(message: Message, state: FSMContext) -> None:
         await message.answer(mssg_txt)
 
         return
-    elif group_members == [""]:
+
+    group_members: list[str] = (
+        await Group_Requests.get_by_creator(group_creator, group_name)
+    ).members.split(";\n")
+
+    if group_members == [""]:
         await state.clear()
 
         mssg_txt = (
