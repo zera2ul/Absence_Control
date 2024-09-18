@@ -96,7 +96,7 @@ async def cmd_cancel(message: Message, state: FSMContext) -> None:
     if not await state.get_state() is None:
         await state.clear()
 
-        mssg_txt = "Команда отменена."
+        mssg_txt = "Команда прервана."
         markup = ReplyKeyboardRemove()
 
         await message.answer(mssg_txt, reply_markup=markup)
