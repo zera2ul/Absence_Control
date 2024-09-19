@@ -239,9 +239,9 @@ async def get_date_to(message: Message, state: FSMContext) -> None:
     date_to = message.text.title()
 
     if await Datetime_Handler.validate_date(utc_offset, date_to):
-        if datetime.strptime(date_from, "%d.%m.%Y") <= datetime.strptime(
+        if datetime.strptime(date_from, "%d.%m.%Y").date() <= datetime.strptime(
             date_to, "%d.%m.%Y"
-        ):
+        ).date():
             await state.clear()
 
             mssg_txt: str = await Report_Requests.get_statistics(
@@ -317,13 +317,15 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
     if date_from in ["Неделя", "Месяц", "Год"]:
         await state.clear()
 
-        reports_file: FSInputFile | str = await Report_Requests.get_file(
+        reports_file, mssg_txt = await Report_Requests.get_file(
             group_name, reports_recipient, date_from
         )
         markup = ReplyKeyboardRemove()
 
         if type(reports_file) == FSInputFile:
-            await message.answer_document(reports_file, reply_markup=markup)
+            await message.answer_document(
+                reports_file, caption=mssg_txt, reply_markup=markup
+            )
 
             remove(reports_file.path)
         else:
@@ -354,18 +356,20 @@ async def get_date_to(message: Message, state: FSMContext) -> None:
     date_to = message.text.title()
 
     if await Datetime_Handler.validate_date(utc_offset, date_to):
-        if datetime.strptime(date_from, "%d.%m.%Y") <= datetime.strptime(
+        if datetime.strptime(date_from, "%d.%m.%Y").date() <= datetime.strptime(
             date_to, "%d.%m.%Y"
-        ):
+        ).date():
             await state.clear()
 
-            reports_file: FSInputFile | str = await Report_Requests.get_file(
+            reports_file, mssg_txt = await Report_Requests.get_file(
                 group_name, reports_recipient, date_from, date_to
             )
             markup = ReplyKeyboardRemove()
 
             if type(reports_file) == FSInputFile:
-                await message.answer_document(reports_file, reply_markup=markup)
+                await message.answer_document(
+                    reports_file, caption=mssg_txt, reply_markup=markup
+                )
 
                 remove(reports_file.path)
             else:
