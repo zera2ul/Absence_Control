@@ -540,7 +540,7 @@ class Report_Requests:
             work_book.save(file_name)
 
             file = FSInputFile(file_name)
-            mssg_txt = f'Файл отчётов об отсутствии участников группы "{group_name}" с {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")}'
+            mssg_txt = f'Файл отчётов об отсутствии участников группы "{group_name}" с {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")}.'
 
             return file, mssg_txt
 
