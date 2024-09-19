@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 from aiogram.types import FSInputFile
 from sqlalchemy import select, update
 from openpyxl import Workbook
-from openpyxl.styles import Alignment
+from openpyxl.styles import Alignment, Font, Side, Border, PatternFill
 
 
 # Подключение пользовательских модулей
@@ -301,7 +301,7 @@ class Report_Requests:
             )
 
             return report
-    
+
     # Статический метод для получения статистики об отсутствии участников группы по её имени, Телеграм id получателя отчётов и
     # датам начала и конца периода времени, для которого она получается
     @staticmethod
@@ -312,7 +312,11 @@ class Report_Requests:
         date_to: str = None,
     ) -> str:
         async with session() as sess:
-            id = (await Group_Requests.get_by_reports_recipient(name, reports_recipient_tg_id)).id
+            id = (
+                await Group_Requests.get_by_reports_recipient(
+                    name, reports_recipient_tg_id
+                )
+            ).id
             reports_recipient_utc_offset: int = (
                 await User_Requests.get(reports_recipient_tg_id)
             ).utc_offset
@@ -405,7 +409,7 @@ class Report_Requests:
         group_reports_recipient_tg_id: int,
         date_from: str,
         date_to: str = None,
-    ) -> FSInputFile | str:
+    ) -> tuple[FSInputFile | str, str]:
         async with session() as sess:
             group = await Group_Requests.get_by_reports_recipient(
                 group_name, group_reports_recipient_tg_id
@@ -440,8 +444,8 @@ class Report_Requests:
                     group_reports_recipient_utc_offset
                 )
             else:
-                date_from: Date = datetime.strptime(date_from, "%d.%m.%Y")
-                date_to: Date = datetime.strptime(date_to, "%d.%m.%Y")
+                date_from: Date = datetime.strptime(date_from, "%d.%m.%Y").date()
+                date_to: Date = datetime.strptime(date_to, "%d.%m.%Y").date()
 
             reports = await sess.scalars(
                 select(Report)
@@ -451,20 +455,27 @@ class Report_Requests:
             )
 
             cnt_reports = 0
-            report_dates: list[str] = []
-            report_members: list[str] = []
+
+            reports_dates: list[str] = []
+            reports_members: list[str] = []
+
+            row_heights: dict[int, int] = {}
+            i = 4
 
             for report in reports:
                 cnt_reports += 1
-                report_dates.append(report.date.strftime("%d.%m.%Y"))
-                report_members.append(report.members.replace(";\n", "\n"))
+
+                reports_dates.append(report.date.strftime("%d.%m.%Y"))
+                reports_members.append(report.members.replace(";\n", "\n"))
+
+                members_cnt = reports_members[-1].count("\n") + 1
+                row_heights[i] = members_cnt * 25
+                i += 1
 
             if cnt_reports == 0:
                 mssg_txt = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{group_name}" не создавалось отчётов об отсутствии.'
 
-                return mssg_txt
-
-            file_name = "./database/Отчёты.xlsx"
+                return mssg_txt, ""
 
             work_book = Workbook()
             work_sheet = work_book.active
@@ -472,30 +483,66 @@ class Report_Requests:
 
             work_sheet.append(
                 [
-                    "Название группы",
                     "Имя создателя группы",
+                    "Название группы",
+                ]
+            )
+            work_sheet.append(
+                [
+                    group_creator_name,
+                    group_name,
+                ]
+            )
+            work_sheet.append(
+                [
                     "Дата создания отчёта",
                     "Участники отчёта",
                 ]
             )
-            work_sheet.row_dimensions[1].height = 25
+            for i in range(1, 4):
+                work_sheet.row_dimensions[i].height = 25
 
             for i in range(cnt_reports):
                 work_sheet.append(
-                    [group_name, group_creator_name, report_dates[i], report_members[i]]
+                    [
+                        reports_dates[i],
+                        reports_members[i],
+                    ]
                 )
-                work_sheet.row_dimensions[i + 2].height = 50
+                work_sheet.row_dimensions[i + 4].height = row_heights[i + 4]
 
-            for column in ["A", "B", "C", "D"]:
+            for column in ["A", "B"]:
                 for cell in work_sheet[column]:
-                    cell.alignment = Alignment(wrap_text=True)
-                work_sheet.column_dimensions[column].width = 50
+                    work_sheet.column_dimensions[column].width = 35
+
+                    cell.alignment = Alignment(
+                        horizontal="center", vertical="center", wrap_text=True
+                    )
+
+                    white_color = "FFFFFF"
+                    black_color = "000000"
+
+                    cell.font = Font(name="Times New Roman", size=14, color=black_color)
+
+                    cell.fill = PatternFill(
+                        start_color=white_color,
+                        end_color=white_color,
+                        fill_type="solid",
+                    )
+
+                    medium = Side(border_style="medium", color=black_color)
+                    cell.border = Border(
+                        left=medium, right=medium, top=medium, bottom=medium
+                    )
+
+            file_name = "./database/Отчёты.xlsx"
 
             work_book.save(file_name)
 
             file = FSInputFile(file_name)
+            mssg_txt = f'Файл отчётов об отсутствии участников группы "{group_name}" с {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")}'
 
-            return file
+            return file, mssg_txt
 
     # Статический метод для создания сегодняшнего отчёта в базе данных по Телеграм id создателя группы, её имени и списку участников отчёта
     async def create(
