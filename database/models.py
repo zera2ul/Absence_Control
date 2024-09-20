@@ -8,6 +8,7 @@ from sqlalchemy import BigInteger, ForeignKey, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.ext.asyncio import AsyncAttrs, create_async_engine, async_sessionmaker
 
+
 # Подключение пользовательских модулей
 from config import DB_URL
 
