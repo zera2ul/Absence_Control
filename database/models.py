@@ -39,7 +39,7 @@ class User(Base):
     groups_where_creator: Mapped[List["Group"]] = relationship(
         "Group", back_populates="creator_info", foreign_keys="Group.creator"
     )
-    groups_where_report_recipient: Mapped[List["Group"]] = relationship(
+    groups_where_reports_recipient: Mapped[List["Group"]] = relationship(
         "Group",
         back_populates="reports_recipient_info",
         foreign_keys="Group.reports_recipient",
