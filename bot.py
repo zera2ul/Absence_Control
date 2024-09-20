@@ -2,14 +2,12 @@
 
 
 # Подключение модулей Python
-from os import getenv
-from dotenv import load_dotenv
 from aiogram import Bot
 
 
-# Настройка работы файла
-load_dotenv()
+# Подключение пользовательских модулей
+from config import BOT_TOKEN
 
 
 # Создание объекта бота
-bot = Bot(token=getenv("BOT_TOKEN"))
+bot = Bot(token=BOT_TOKEN)
