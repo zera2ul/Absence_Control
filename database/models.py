@@ -2,19 +2,17 @@
 
 
 # Подключение модулей Python
-from os import getenv
-from dotenv import load_dotenv
 from datetime import date as Date
 from typing import List
 from sqlalchemy import BigInteger, ForeignKey, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.ext.asyncio import AsyncAttrs, create_async_engine, async_sessionmaker
 
+# Подключение пользовательских модулей
+from config import DB_URL
 
 # Настройка работы файла
-load_dotenv()
-
-engine = create_async_engine(url=getenv("DB_URL"))
+engine = create_async_engine(url=DB_URL)
 session = async_sessionmaker(engine)
 
 

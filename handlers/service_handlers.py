@@ -2,8 +2,6 @@
 
 
 # Подключение модулей Python
-from os import getenv
-from dotenv import load_dotenv
 from aiogram import Router
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, ReplyKeyboardRemove
@@ -11,6 +9,7 @@ from aiogram.fsm.context import FSMContext
 
 
 # Подключение пользовательских модулей
+from config import OWNER_TG_ID
 from bot import bot
 from handlers.middleware import Middleware
 from handlers.states import Set_Utc_Offset, Send_Feedback
@@ -18,8 +17,6 @@ from database.requests import User_Requests
 
 
 # Настройка работы файла
-load_dotenv()
-
 service_router = Router()
 service_router.message.middleware(Middleware())
 
@@ -30,9 +27,7 @@ async def cmd_start(message: Message) -> None:
     await User_Requests.init(message.from_user.id)
 
     mssg_txt = f"Здравствуйте, {message.from_user.full_name}!\n"
-    mssg_txt += (
-        "Этот бот предназначен для контроля отсутствия участников групп.\n"
-    )
+    mssg_txt += "Этот бот предназначен для контроля отсутствия участников групп.\n"
     mssg_txt += 'Для получения более подробной справочной информации воспользуйтесь командой "/help".'
 
     await message.answer(mssg_txt)
@@ -177,7 +172,7 @@ async def get_feedback(message: Message, state: FSMContext) -> None:
 
     await User_Requests.increase_feedbacks_cnt(message.from_user.id)
 
-    chat_id: int = int(getenv("OWNER_TG_ID"))
+    chat_id: int = OWNER_TG_ID
     user_name: str = message.from_user.username
     mssg_txt: str = f"Отзыв от пользователя @{user_name}.\n\n"
     mssg_txt += message.text
