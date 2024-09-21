@@ -130,7 +130,7 @@ class Pdf_Writer:
 
         table = Table(rows_data, colWidths=[200, 200, 200], rowHeights=rows_heights)
 
-        pdfmetrics.registerFont(TTFont("Times New Roman", "times.ttf"))
+        pdfmetrics.registerFont(TTFont("Times New Roman", "./database/times.ttf"))
         start = (0, 0)
         end = (-1, -1)
         style = TableStyle(
