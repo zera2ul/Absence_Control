@@ -8,7 +8,7 @@ from aiogram.types import FSInputFile
 from sqlalchemy import select, update
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, Side, Border, PatternFill
-
+from fpdf import FPDF
 
 # Подключение пользовательских модулей
 from bot import bot
@@ -67,7 +67,8 @@ class Datetime_Handler:
 class Xlsx_Writer:
     """Класс для записи данных в файл *.xlsx"""
 
-    # Метод для создания файла отчётов
+    # Статический метод для создания файла отчётов по количеству рядов в нём, данным в рядах и высотам рядов
+    @staticmethod
     async def create_reports_file(
         cnt_rows: int,
         rows_data: list[list[str]],
@@ -92,8 +93,8 @@ class Xlsx_Writer:
                     horizontal="center", vertical="center", wrap_text=True
                 )
 
-                white_color = "FFFFFF"
                 black_color = "000000"
+                white_color = "FFFFFF"
 
                 cell.font = Font(name="Times New Roman", size=14, color=black_color)
 
@@ -109,6 +110,35 @@ class Xlsx_Writer:
                 )
 
         work_book.save("./database/Отчёты.xlsx")
+
+
+# Класс для записи данных в файл *.pdf
+class Pdf_Writer:
+    """Класс для записи данных в файл *.pdf"""
+
+    # Статический метод для создания файла отчётов по количеству рядов в нём, данным в рядах и высотам рядов
+    @staticmethod
+    async def create_reports_file(
+        cnt_rows: int, rows_data: list[list[str]], rows_heights: dict[int, int]
+    ) -> None:
+        pdf = FPDF()
+        pdf.add_page()
+
+        for i in range(1, cnt_rows):
+            row_data = rows_data[i]
+            row_height = rows_heights[i]
+
+            for cell_data in row_data:
+                pdf.multi_cell(35, row_height, cell_data, 1, align="C")
+
+        black_color = [0] * 3
+        white_color = [255] * 3
+
+        pdf.set_font("Times New Roman", size=14)
+        pdf.set_text_color(black_color)
+        pdf.set_fill_color(white_color)
+
+        pdf.output("./database/Отчёты.pdf")
 
 
 # Класс для описания запросов о пользователе базу данных
