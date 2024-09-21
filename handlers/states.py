@@ -83,3 +83,4 @@ class Get_Reports_File(StatesGroup):
     group_name = State()
     date_from = State()
     date_to = State()
+    file_format = State()

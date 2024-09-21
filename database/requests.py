@@ -8,7 +8,12 @@ from aiogram.types import FSInputFile
 from sqlalchemy import select, update
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, Side, Border, PatternFill
-from fpdf import FPDF
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase import pdfmetrics
+from reportlab.lib import colors
+
 
 # Подключение пользовательских модулей
 from bot import bot
@@ -121,24 +126,28 @@ class Pdf_Writer:
     async def create_reports_file(
         cnt_rows: int, rows_data: list[list[str]], rows_heights: dict[int, int]
     ) -> None:
-        pdf = FPDF()
-        pdf.add_page()
+        pdf = SimpleDocTemplate("./database/Отчёты.pdf", pagesize=letter)
 
-        for i in range(1, cnt_rows):
-            row_data = rows_data[i]
-            row_height = rows_heights[i]
+        table = Table(rows_data, colWidths=[200, 200, 200], rowHeights=rows_heights)
 
-            for cell_data in row_data:
-                pdf.multi_cell(35, row_height, cell_data, 1, align="C")
+        pdfmetrics.registerFont(TTFont("Times New Roman", "times.ttf"))
+        start = (0, 0)
+        end = (-1, -1)
+        style = TableStyle(
+            [
+                ("ALIGN", start, end, "CENTER"),
+                ("VALIGN", start, end, "MIDDLE"),
+                ("FONTNAME", start, end, "Times New Roman"),
+                ("FONTSIZE", start, end, 14),
+                ("TEXTCOLOR", start, end, colors.black),
+                ("BACKGROUND", start, end, colors.white),
+                ("GRID", start, end, 1, colors.black),
+            ]
+        )
 
-        black_color = [0] * 3
-        white_color = [255] * 3
+        table.setStyle(style)
 
-        pdf.set_font("Times New Roman", size=14)
-        pdf.set_text_color(black_color)
-        pdf.set_fill_color(white_color)
-
-        pdf.output("./database/Отчёты.pdf")
+        pdf.build([table])
 
 
 # Класс для описания запросов о пользователе базу данных
@@ -486,7 +495,8 @@ class Report_Requests:
         group_name: str,
         group_reports_recipient_tg_id: int,
         date_from: str,
-        date_to: str = None,
+        date_to: str,
+        file_format: str,
     ) -> tuple[FSInputFile | str, str]:
         async with session() as sess:
             group = await Group_Requests.get_by_reports_recipient(
@@ -525,7 +535,7 @@ class Report_Requests:
                 date_from: Date = datetime.strptime(date_from, "%d.%m.%Y").date()
                 date_to: Date = datetime.strptime(date_to, "%d.%m.%Y").date()
 
-            rows_data: list[str] = [
+            rows_data: list[list[str]] = [
                 [
                     "Имя создателя группы",
                     "Название группы",
@@ -539,7 +549,7 @@ class Report_Requests:
                     "Участники отчёта",
                 ],
             ]
-            row_heights: dict[int, int] = {1: 25, 2: 25, 3: 25}
+            rows_heights: list[int] = [25, 25, 25]
 
             reports = await sess.scalars(
                 select(Report)
@@ -560,7 +570,7 @@ class Report_Requests:
                 members_cnt = report_members.count("\n") + 1
 
                 rows_data.append([report_date, report_members])
-                row_heights[i] = members_cnt * 25
+                rows_heights.append(members_cnt * 25)
 
                 i += 1
 
@@ -569,11 +579,16 @@ class Report_Requests:
 
                 return mssg_txt, ""
 
-            await Xlsx_Writer.create_reports_file(
-                cnt_reports + 3, rows_data, row_heights
-            )
+            if file_format == "Xlsx":
+                await Xlsx_Writer.create_reports_file(
+                    cnt_reports + 3, rows_data, rows_heights
+                )
+            else:
+                await Pdf_Writer.create_reports_file(
+                    cnt_reports + 3, rows_data, rows_heights
+                )
 
-            file = FSInputFile("./database/Отчёты.xlsx")
+            file = FSInputFile(f"./database/Отчёты.{file_format.lower()}")
             mssg_txt = f'Файл отчётов об отсутствии участников группы "{group_name}" с {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")}.'
 
             return file, mssg_txt
