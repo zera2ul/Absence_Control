@@ -63,6 +63,54 @@ class Datetime_Handler:
             return False
 
 
+# Класс для записи данных в файл *.xlsx
+class Xlsx_Writer:
+    """Класс для записи данных в файл *.xlsx"""
+
+    # Метод для создания файла отчётов
+    async def create_reports_file(
+        cnt_rows: int,
+        rows_data: list[list[str]],
+        row_heights: dict[int, int],
+    ) -> None:
+        work_book = Workbook()
+        work_sheet = work_book.active
+        work_sheet.title = "Отчёты"
+
+        for i in range(cnt_rows):
+            work_sheet.append(rows_data[i])
+
+        for i in range(1, cnt_rows + 1):
+            work_sheet.row_dimensions[i].height = row_heights[i]
+
+        columns = ["A", "B"]
+        for column in columns:
+            for cell in work_sheet[column]:
+                work_sheet.column_dimensions[column].width = 35
+
+                cell.alignment = Alignment(
+                    horizontal="center", vertical="center", wrap_text=True
+                )
+
+                white_color = "FFFFFF"
+                black_color = "000000"
+
+                cell.font = Font(name="Times New Roman", size=14, color=black_color)
+
+                cell.fill = PatternFill(
+                    start_color=white_color,
+                    end_color=white_color,
+                    fill_type="solid",
+                )
+
+                medium = Side(border_style="medium", color=black_color)
+                cell.border = Border(
+                    left=medium, right=medium, top=medium, bottom=medium
+                )
+
+        work_book.save("./database/Отчёты.xlsx")
+
+
 # Класс для описания запросов о пользователе базу данных
 class User_Requests:
     """Класс для описания запросов о пользователях в базу данных"""
@@ -447,29 +495,43 @@ class Report_Requests:
                 date_from: Date = datetime.strptime(date_from, "%d.%m.%Y").date()
                 date_to: Date = datetime.strptime(date_to, "%d.%m.%Y").date()
 
+            rows_data: list[str] = [
+                [
+                    "Имя создателя группы",
+                    "Название группы",
+                ],
+                [
+                    group_creator_name,
+                    group_name,
+                ],
+                [
+                    "Дата создания отчёта",
+                    "Участники отчёта",
+                ],
+            ]
+            row_heights: dict[int, int] = {1: 25, 2: 25, 3: 25}
+
             reports = await sess.scalars(
                 select(Report)
                 .where(Report.group == group_id)
                 .where(Report.date >= date_from)
                 .where(Report.date <= date_to)
+                .order_by(Report.date)
             )
 
             cnt_reports = 0
 
-            reports_dates: list[str] = []
-            reports_members: list[str] = []
-
-            row_heights: dict[int, int] = {}
             i = 4
 
             for report in reports:
                 cnt_reports += 1
+                report_date = report.date.strftime("%d.%m.%Y")
+                report_members = report.members.replace(";\n", "\n")
+                members_cnt = report_members.count("\n") + 1
 
-                reports_dates.append(report.date.strftime("%d.%m.%Y"))
-                reports_members.append(report.members.replace(";\n", "\n"))
-
-                members_cnt = reports_members[-1].count("\n") + 1
+                rows_data.append([report_date, report_members])
                 row_heights[i] = members_cnt * 25
+
                 i += 1
 
             if cnt_reports == 0:
@@ -477,69 +539,11 @@ class Report_Requests:
 
                 return mssg_txt, ""
 
-            work_book = Workbook()
-            work_sheet = work_book.active
-            work_sheet.title = "Отчёты"
-
-            work_sheet.append(
-                [
-                    "Имя создателя группы",
-                    "Название группы",
-                ]
+            await Xlsx_Writer.create_reports_file(
+                cnt_reports + 3, rows_data, row_heights
             )
-            work_sheet.append(
-                [
-                    group_creator_name,
-                    group_name,
-                ]
-            )
-            work_sheet.append(
-                [
-                    "Дата создания отчёта",
-                    "Участники отчёта",
-                ]
-            )
-            for i in range(1, 4):
-                work_sheet.row_dimensions[i].height = 25
 
-            for i in range(cnt_reports):
-                work_sheet.append(
-                    [
-                        reports_dates[i],
-                        reports_members[i],
-                    ]
-                )
-                work_sheet.row_dimensions[i + 4].height = row_heights[i + 4]
-
-            for column in ["A", "B"]:
-                for cell in work_sheet[column]:
-                    work_sheet.column_dimensions[column].width = 35
-
-                    cell.alignment = Alignment(
-                        horizontal="center", vertical="center", wrap_text=True
-                    )
-
-                    white_color = "FFFFFF"
-                    black_color = "000000"
-
-                    cell.font = Font(name="Times New Roman", size=14, color=black_color)
-
-                    cell.fill = PatternFill(
-                        start_color=white_color,
-                        end_color=white_color,
-                        fill_type="solid",
-                    )
-
-                    medium = Side(border_style="medium", color=black_color)
-                    cell.border = Border(
-                        left=medium, right=medium, top=medium, bottom=medium
-                    )
-
-            file_name = "./database/Отчёты.xlsx"
-
-            work_book.save(file_name)
-
-            file = FSInputFile(file_name)
+            file = FSInputFile("./database/Отчёты.xlsx")
             mssg_txt = f'Файл отчётов об отсутствии участников группы "{group_name}" с {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")}.'
 
             return file, mssg_txt
