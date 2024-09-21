@@ -202,7 +202,7 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
     group_name: str = (await state.get_data())["group_name"]
     reports_recipient: int = message.from_user.id
     utc_offset: int = (await User_Requests.get(reports_recipient)).utc_offset
-    date_from = message.text.title()
+    date_from: str = message.text.title()
 
     if date_from in ["Неделя", "Месяц", "Год"]:
         await state.clear()
@@ -236,12 +236,13 @@ async def get_date_to(message: Message, state: FSMContext) -> None:
     reports_recipient: int = message.from_user.id
     utc_offset: int = (await User_Requests.get(reports_recipient)).utc_offset
     date_from = data["date_from"]
-    date_to = message.text.title()
+    date_to: str = message.text.title()
 
     if await Datetime_Handler.validate_date(utc_offset, date_to):
-        if datetime.strptime(date_from, "%d.%m.%Y").date() <= datetime.strptime(
-            date_to, "%d.%m.%Y"
-        ).date():
+        if (
+            datetime.strptime(date_from, "%d.%m.%Y").date()
+            <= datetime.strptime(date_to, "%d.%m.%Y").date()
+        ):
             await state.clear()
 
             mssg_txt: str = await Report_Requests.get_statistics(
@@ -309,27 +310,18 @@ async def get_group_name(message: Message, state: FSMContext) -> None:
 # Получение начала периода времени от пользователя
 @work_router.message(Get_Reports_File.date_from)
 async def get_date_from(message: Message, state: FSMContext) -> None:
-    group_name: str = (await state.get_data())["group_name"]
     reports_recipient: int = message.from_user.id
     utc_offset: int = (await User_Requests.get(reports_recipient)).utc_offset
-    date_from = message.text.title()
+    date_from: str = message.text.title()
 
     if date_from in ["Неделя", "Месяц", "Год"]:
-        await state.clear()
+        await state.update_data(date_from=date_from)
+        await state.set_state(Get_Reports_File.file_format)
 
-        reports_file, mssg_txt = await Report_Requests.get_file(
-            group_name, reports_recipient, date_from
-        )
-        markup = ReplyKeyboardRemove()
+        mssg_txt = "Выберите формат файла."
+        markup: ReplyKeyboardMarkup = await create_reply_markup(["Xlsx", "Pdf"])
 
-        if type(reports_file) == FSInputFile:
-            await message.answer_document(
-                reports_file, caption=mssg_txt, reply_markup=markup
-            )
-
-            remove(reports_file.path)
-        else:
-            await message.answer(reports_file, reply_markup=markup)
+        await message.answer(mssg_txt, reply_markup=markup)
     else:
         if await Datetime_Handler.validate_date(utc_offset, date_from):
             await state.update_data(date_from=date_from)
@@ -349,36 +341,66 @@ async def get_date_from(message: Message, state: FSMContext) -> None:
 @work_router.message(Get_Reports_File.date_to)
 async def get_date_to(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
-    group_name: str = data["group_name"]
     reports_recipient: int = message.from_user.id
     utc_offset: int = (await User_Requests.get(reports_recipient)).utc_offset
     date_from = data["date_from"]
-    date_to = message.text.title()
+    date_to: str = message.text.title()
 
     if await Datetime_Handler.validate_date(utc_offset, date_to):
-        if datetime.strptime(date_from, "%d.%m.%Y").date() <= datetime.strptime(
-            date_to, "%d.%m.%Y"
-        ).date():
-            await state.clear()
+        if (
+            datetime.strptime(date_from, "%d.%m.%Y").date()
+            <= datetime.strptime(date_to, "%d.%m.%Y").date()
+        ):
+            await state.update_data(date_to=date_to)
+            await state.set_state(Get_Reports_File.file_format)
 
-            reports_file, mssg_txt = await Report_Requests.get_file(
-                group_name, reports_recipient, date_from, date_to
-            )
-            markup = ReplyKeyboardRemove()
+            mssg_txt = "Выберите формат файла из списка."
+            markup: ReplyKeyboardMarkup = await create_reply_markup(["Xlsx", "Pdf"])
 
-            if type(reports_file) == FSInputFile:
-                await message.answer_document(
-                    reports_file, caption=mssg_txt, reply_markup=markup
-                )
-
-                remove(reports_file.path)
-            else:
-                await message.answer(reports_file, reply_markup=markup)
+            await message.answer(mssg_txt, reply_markup=markup)
         else:
             mssg_txt = "Дата конца периода времени не может быть раньше даты его начала, отправьте другую."
 
             await message.answer(mssg_txt)
     else:
         mssg_txt = "Неверная дата, отправьте другую."
+
+        await message.answer(mssg_txt)
+
+
+# Получение формата файла от пользователя
+@work_router.message(Get_Reports_File.file_format)
+async def get_file_format(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    group_name: str = data["group_name"]
+    reports_recipient: int = message.from_user.id
+    utc_offset: int = (await User_Requests.get(reports_recipient)).utc_offset
+    date_from = data["date_from"]
+
+    try:
+        date_to = data["date_to"]
+    except KeyError:
+        date_to = None
+
+    file_format: str = message.text.title()
+
+    if file_format in ["Xlsx", "Pdf"]:
+        await state.clear()
+
+        reports_file, mssg_txt = await Report_Requests.get_file(
+            group_name, reports_recipient, date_from, date_to, file_format
+        )
+        markup = ReplyKeyboardRemove()
+
+        if type(reports_file) == FSInputFile:
+            await message.answer_document(
+                reports_file, caption=mssg_txt, reply_markup=markup
+            )
+
+            remove(reports_file.path)
+        else:
+            await message.answer(reports_file, reply_markup=markup)
+    else:
+        mssg_txt = "Неверный формат файла, введите другой."
 
         await message.answer(mssg_txt)
