@@ -77,7 +77,7 @@ class Xlsx_Writer:
     async def create_reports_file(
         cnt_rows: int,
         rows_data: list[list[str]],
-        row_heights: dict[int, int],
+        row_heights: list[int],
     ) -> None:
         work_book = Workbook()
         work_sheet = work_book.active
@@ -87,7 +87,7 @@ class Xlsx_Writer:
             work_sheet.append(rows_data[i])
 
         for i in range(1, cnt_rows + 1):
-            work_sheet.row_dimensions[i].height = row_heights[i]
+            work_sheet.row_dimensions[i].height = row_heights[i - 1]
 
         columns = ["A", "B"]
         for column in columns:
@@ -333,10 +333,10 @@ class Group_Requests:
     @classmethod
     async def remove_member(cls, creator_tg_id: int, name: str, member: str) -> None:
         async with session() as sess:
+            group: Group | None = await cls.get_by_creator(creator_tg_id, name)
+            id: int = group.id
             creator: int = (await User_Requests.get(creator_tg_id)).id
-            members: list[str] = (
-                await cls.get_by_creator(creator_tg_id, name)
-            ).members.split(";\n")
+            members: list[str] = group.members.split(";\n")
             members.remove(member)
             members: str = ";\n".join(members)
 
@@ -346,6 +346,22 @@ class Group_Requests:
                 .where(Group.name == name)
                 .values(members=members)
             )
+
+            reports: list[Report] = await sess.scalars(
+                select(Report)
+                .where(Report.group == id)
+                .where(Report.members.like(f"%{member}%"))
+            )
+            for report in reports:
+                report_members: list[str] = report.members.split(";\n")
+                report_members.remove(member)
+                report_members: str = ";\n".join(report_members)
+
+                await sess.execute(
+                    update(Report)
+                    .where(Report.id == report.id)
+                    .values(members=report_members)
+                )
 
             await sess.commit()
 
@@ -393,17 +409,16 @@ class Report_Requests:
     # датам начала и конца периода времени, для которого она получается
     @staticmethod
     async def get_statistics(
-        name: str,
+        group_name: str,
         reports_recipient_tg_id: int,
         date_from: str,
         date_to: str = None,
     ) -> str:
         async with session() as sess:
-            id = (
-                await Group_Requests.get_by_reports_recipient(
-                    name, reports_recipient_tg_id
-                )
-            ).id
+            group: Group = await Group_Requests.get_by_reports_recipient(
+                group_name, reports_recipient_tg_id
+            )
+            group_id: int = group.id
             reports_recipient_utc_offset: int = (
                 await User_Requests.get(reports_recipient_tg_id)
             ).utc_offset
@@ -435,25 +450,28 @@ class Report_Requests:
 
             reports = await sess.scalars(
                 select(Report)
-                .where(Report.group == id)
+                .where(Report.group == group_id)
                 .where(Report.date >= date_from)
                 .where(Report.date <= date_to)
             )
-            cnt_reports: int = 0
+            reports_cnt: int = 0
             reports_with_member: dict[str, int] = {}
 
             for report in reports:
-                cnt_reports += 1
+                reports_cnt += 1
                 report_members: list[str] = report.members.split(";\n")
 
-                for member in report_members:
-                    if not member in reports_with_member:
-                        reports_with_member[member] = 0
+                if report_members == [""]:
+                    continue
 
-                    reports_with_member[member] += 1
+                for report_member in report_members:
+                    if not report_member in reports_with_member:
+                        reports_with_member[report_member] = 0
 
-            if cnt_reports == 0:
-                statistics = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{name}" не создавалось отчётов об отсутствии.'
+                    reports_with_member[report_member] += 1
+
+            if reports_cnt == 0:
+                statistics = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{group_name}" не создавалось отчётов об отсутствии.'
 
                 return statistics
 
@@ -462,26 +480,26 @@ class Report_Requests:
                 key=lambda item: item[1],
                 reverse=True,
             )
-            cnt_reports_members: int = len(reports_with_member_sorted)
+            reports_members_cnt: int = len(reports_with_member_sorted)
 
-            if cnt_reports_members == 0:
-                statistics = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{name}" отсутствующих не было.'
+            if reports_members_cnt == 0:
+                statistics = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{group_name}" отсутствующих не было.'
 
                 return statistics
             else:
-                statistics = f'Статистика отсутствия участников группы "{name}" с {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")}:\n'
+                statistics = f'Статистика отсутствия участников группы "{group_name}" с {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")}:\n'
 
-                for i in range(cnt_reports_members):
+                for i in range(reports_members_cnt):
                     member: str = reports_with_member_sorted[i][0]
                     reports_with_this_member: int = reports_with_member_sorted[i][1]
                     reports_with_this_member_percentages = int(
-                        reports_with_this_member / cnt_reports * 100
+                        reports_with_this_member / reports_cnt * 100
                     )
 
-                    statistics += f"{i + 1}. {member} - Присутствовал в {reports_with_this_member} отчётах из {cnt_reports} "
+                    statistics += f"{i + 1}. {member} - Присутствовал в {reports_with_this_member} отчётах из {reports_cnt} "
                     statistics += f"({reports_with_this_member_percentages}%)"
 
-                    if i < cnt_reports_members - 1:
+                    if i < reports_members_cnt - 1:
                         statistics += ";\n"
                     else:
                         statistics += "."
@@ -499,7 +517,7 @@ class Report_Requests:
         file_format: str,
     ) -> tuple[FSInputFile | str, str]:
         async with session() as sess:
-            group = await Group_Requests.get_by_reports_recipient(
+            group: Group = await Group_Requests.get_by_reports_recipient(
                 group_name, group_reports_recipient_tg_id
             )
             group_id: int = group.id
@@ -559,33 +577,33 @@ class Report_Requests:
                 .order_by(Report.date)
             )
 
-            cnt_reports = 0
+            reports_cnt = 0
 
             i = 4
 
             for report in reports:
-                cnt_reports += 1
-                report_date = report.date.strftime("%d.%m.%Y")
-                report_members = report.members.replace(";\n", "\n")
-                members_cnt = report_members.count("\n") + 1
+                reports_cnt += 1
+                report_date: Date = report.date.strftime("%d.%m.%Y")
+                report_members: str = report.members.replace(";\n", "\n")
+                lines_cnt = report_members.count("\n") + 1
 
                 rows_data.append([report_date, report_members])
-                rows_heights.append(members_cnt * 25)
+                rows_heights.append(lines_cnt * 25)
 
                 i += 1
 
-            if cnt_reports == 0:
+            if reports_cnt == 0:
                 mssg_txt = f'С {date_from.strftime("%d.%m.%Y")} по {date_to.strftime("%d.%m.%Y")} в группе "{group_name}" не создавалось отчётов об отсутствии.'
 
                 return mssg_txt, ""
 
             if file_format == "Xlsx":
                 await Xlsx_Writer.create_reports_file(
-                    cnt_reports + 3, rows_data, rows_heights
+                    reports_cnt + 3, rows_data, rows_heights
                 )
             else:
                 await Pdf_Writer.create_reports_file(
-                    cnt_reports + 3, rows_data, rows_heights
+                    reports_cnt + 3, rows_data, rows_heights
                 )
 
             file = FSInputFile(f"./database/Отчёты.{file_format.lower()}")
