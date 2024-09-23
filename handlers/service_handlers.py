@@ -13,7 +13,7 @@ from config import OWNER_TG_ID
 from bot import bot
 from handlers.middleware import Middleware
 from handlers.states import Set_Utc_Offset, Send_Feedback
-from database.requests import User_Requests
+from database.requests import Datetime_Handler, User_Requests
 
 
 # Настройка работы файла
@@ -27,9 +27,7 @@ async def cmd_start(message: Message) -> None:
     await User_Requests.init(message.from_user.id)
 
     mssg_txt = f"Здравствуйте, {message.from_user.full_name}!\n"
-    mssg_txt += (
-        "Этот бот предназначен для контроля отсутствия участников групп.\n"
-    )
+    mssg_txt += "Этот бот предназначен для контроля отсутствия участников групп.\n"
     mssg_txt += 'Для получения более подробной справочной информации воспользуйтесь командой "/help".'
 
     await message.answer(mssg_txt)
@@ -118,26 +116,14 @@ async def cmd_setutcoffset(message: Message, state: FSMContext) -> None:
 async def get_utc_offset(message: Message, state: FSMContext) -> None:
     utc_offset: str = message.text
 
-    try:
-        utc_offset: int = int(utc_offset)
-    except ValueError:
-        mssg_txt = "Смещение UTC должно быть целым числом, введите другое."
+    if not await Datetime_Handler.validate_utc_offset(utc_offset):
+        mssg_txt = "Неверное смещение UTC, введите другое."
 
         await message.answer(mssg_txt)
 
         return
 
-    min_time = -86400
-    max_time = 86400
-
-    if not min_time < utc_offset < max_time:
-        mssg_txt = (
-            "Смещение UTC выходит за границы допустимых значений, введите другое."
-        )
-
-        await message.answer(mssg_txt)
-
-        return
+    utc_offset: int = await Datetime_Handler.utc_offset_string_to_int(utc_offset)
 
     await User_Requests.set_utc_offset(message.from_user.id, utc_offset)
 
