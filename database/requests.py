@@ -102,12 +102,12 @@ class Datetime_Handler:
         sign: str = utc_offset[0]
         colon_position: str = utc_offset.find(":")
         hours = int(utc_offset[1:colon_position])
-        minutes = int(utc_offset[colon_position + 1:])
+        minutes = int(utc_offset[colon_position + 1 :])
         utc_offset_in_seconds: int = hours * 3600 + minutes * 60
-        
+
         if sign == "-":
             utc_offset_in_seconds = -utc_offset_in_seconds
-        
+
         return utc_offset_in_seconds
 
 
