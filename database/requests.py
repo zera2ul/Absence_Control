@@ -54,6 +54,35 @@ class Datetime_Handler:
 
         return date
 
+    # Статический метод для валидации смещения UTC
+    @staticmethod
+    async def validate_utc_offset(utc_offset: str) -> bool:
+        if not utc_offset[0] in ["+", "-"]:
+            return False
+
+        colon_position: int = utc_offset.find(":")
+
+        if colon_position == -1:
+            return False
+
+        try:
+            hours = int(utc_offset[1:colon_position])
+
+            if not 0 <= hours <= 23:
+                return False
+        except ValueError:
+            return False
+
+        try:
+            minutes = int(utc_offset[colon_position + 1 :])
+
+            if not 0 <= minutes <= 59:
+                return False
+        except ValueError:
+            return False
+
+        return True
+
     # Метод класса для валидации даты в часовом поясе по смещению UTC и самой дате
     @classmethod
     async def validate_date(cls, utc_offset: int, date: str) -> bool:
@@ -66,6 +95,20 @@ class Datetime_Handler:
             return True
         except ValueError:
             return False
+
+    # Статический метод для конвертации строкового значения смещения UTC в числовое
+    @staticmethod
+    async def utc_offset_string_to_int(utc_offset: str) -> int:
+        sign: str = utc_offset[0]
+        colon_position: str = utc_offset.find(":")
+        hours = int(utc_offset[1:colon_position])
+        minutes = int(utc_offset[colon_position + 1:])
+        utc_offset_in_seconds: int = hours * 3600 + minutes * 60
+        
+        if sign == "-":
+            utc_offset_in_seconds = -utc_offset_in_seconds
+        
+        return utc_offset_in_seconds
 
 
 # Класс для записи данных в файл *.xlsx
