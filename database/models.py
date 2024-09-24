@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncAttrs, create_async_engine, async_sessio
 # Подключение пользовательских модулей
 from config import DB_URL
 
+
 # Настройка работы файла
 engine = create_async_engine(url=DB_URL)
 session = async_sessionmaker(engine)
